@@ -39,3 +39,6 @@ curl -X POST https://agentic-i1ng.onrender.com/api/story/run \
 - Prompts are intentionally minimal; refine for your domains.
 - For production, replace naive parsers with **structured output** (JSON schemas) and add **guardrails**.
 - Extend with RAG by injecting architecture context before `codingAgent`.
+- https://sharathmech.atlassian.net
+- https://agentic-i1ng.onrender.com
+- https://github.com/sunny647/agentic
