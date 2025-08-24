@@ -20,7 +20,8 @@ router.post('/run', async (req, res) => {
     }
     const { story, jiraKey, context } = req.body || {};
 
-    let storyText = story;
+    // Extract story description if story is an object with a description property
+    let storyText = typeof story === 'object' && story?.description ? story.description : story;
     let acceptanceCriteria = context?.acceptanceCriteria || [];
 
     // If you want, fetch Jira here (left minimal to keep demo self-contained)
@@ -30,6 +31,7 @@ router.post('/run', async (req, res) => {
 
     if (!storyText) return res.status(400).json({ error: 'story or jiraKey required' });
 
+    console.log('Starting pipeline with story:', storyText);
     const output = await runPipeline({ requestId, story: storyText, context: context || {} });
 
     res.json({ requestId, output });
