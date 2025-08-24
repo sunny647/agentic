@@ -18,8 +18,9 @@ router.post('/run', async (req, res) => {
     } else {
       console.log('Incoming /run request body:', req.body);
     }
-    const { issue } = req.body || {};
+    const { issue, story, jiraKey, context } = req.body || {};
 
+    let storyText;
     // If issue object is present, extract summary, description, and key
     if (issue && issue.fields) {
       const { summary, description } = issue.fields;
@@ -30,7 +31,11 @@ router.post('/run', async (req, res) => {
       if (key) {
         jiraKey = key;
       }
+    } else {
+      // Extract story description if story is an object with a description property
+      storyText = typeof story === 'object' && story?.description ? story.description : story;
     }
+    let acceptanceCriteria = context?.acceptanceCriteria || [];
 
     // If you want, fetch Jira here (left minimal to keep demo self-contained)
     if (!storyText && jiraKey) {
