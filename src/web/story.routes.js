@@ -10,7 +10,14 @@ const router = Router();
  */
 router.post('/run', async (req, res) => {
   try {
+    console.log('Received /run request with body:', req.body);
     const requestId = uuid();
+    // Log the incoming request body
+    if (req.log) {
+      req.log.info({ body: req.body }, 'Incoming /run request body');
+    } else {
+      console.log('Incoming /run request body:', req.body);
+    }
     const { story, jiraKey, context } = req.body || {};
 
     let storyText = story;
@@ -28,7 +35,6 @@ router.post('/run', async (req, res) => {
     res.json({ requestId, output });
   } catch (err) {
     console.error('Pipeline error:', err); // Add this for more detail
-    req.log.error({ err }, 'pipeline failed');
     res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
