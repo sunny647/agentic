@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Story Input - Agentic Supervisor</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    label { display: block; margin-top: 1em; }
+    textarea, input[type=text] { width: 100%; padding: 0.5em; margin-top: 0.5em; }
+    button { margin-top: 1em; padding: 0.5em 2em; }
+    .result { margin-top: 2em; background: #f6f8fa; padding: 1em; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Submit a Story for RCA</h1>
+  <form id="storyForm">
+    <label for="story">Story</label>
+    <textarea id="story" name="story" rows="4" required></textarea>
+
+    <label for="repoOwner">Repo Owner</label>
+    <input type="text" id="repoOwner" name="repoOwner" placeholder="e.g. acme">
+
+    <label for="repoName">Repo Name</label>
+    <input type="text" id="repoName" name="repoName" placeholder="e.g. shop">
+
+    <label for="techStack">Tech Stack (comma separated)</label>
+    <input type="text" id="techStack" name="techStack" placeholder="e.g. SFCC, Node, React">
+
+    <label for="acceptanceCriteria">Acceptance Criteria (one per line)</label>
+    <textarea id="acceptanceCriteria" name="acceptanceCriteria" rows="3"></textarea>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <div class="result" id="result" style="display:none;"></div>
+
+  <script>
+    document.getElementById('storyForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const story = document.getElementById('story').value;
+      const repoOwner = document.getElementById('repoOwner').value;
+      const repoName = document.getElementById('repoName').value;
+      const techStack = document.getElementById('techStack').value.split(',').map(s => s.trim()).filter(Boolean);
+      const acceptanceCriteria = document.getElementById('acceptanceCriteria').value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const payload = {
+        story,
+        context: {
+          repo: { owner: repoOwner, name: repoName },
+          techStack,
+          acceptanceCriteria
+        }
+      };
+
+      const res = await fetch('/api/story/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      const resultDiv = document.getElementById('result');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = JSON.stringify(data, null, 2);
+    });
+  </script>
+</body>
+</html>

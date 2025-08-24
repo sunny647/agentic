@@ -1,0 +1,21 @@
+{
+  "name": "agentic-supervisor-jira-to-pr",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development node --env-file=.env src/server.js",
+    "start": "node --env-file=.env src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pino": "^9.2.0",
+    "pino-http": "^10.0.0",
+    "openai": "^4.57.0",
+    "@langchain/core": "^0.3.10",
+    "@langchain/openai": "^0.3.8",
+    "@langchain/langgraph": "^0.2.16",
+    "zod": "^3.23.8",
+    "dotenv": "^16.4.5",
+    "uuid": "^9.0.1"
+  }
+}

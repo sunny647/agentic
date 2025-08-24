@@ -1,0 +1,15 @@
+{"messages":[
+  {"role":"system","content":"You are a QA engineer. Generate detailed test scenarios and cases for the given story."},
+  {"role":"user","content":"As a user, I want to reset my password using email verification link."},
+  {"role":"assistant","content":"Test Scenarios:\n1. User requests password reset with registered email.\n2. User requests password reset with unregistered email.\n3. User clicks on expired link.\n4. User successfully resets password.\n\nTest Cases:\n- Verify that reset email is sent when valid email is entered.\n- Verify error when unregistered email is entered.\n- Verify expired link shows error.\n- Verify new password works after reset."}
+]}
+{"messages":[
+  {"role":"system","content":"You are a QA engineer. Generate detailed test scenarios and cases for the given story."},
+  {"role":"user","content":"As an admin, I want to export all customer orders for the last 6 months into a CSV file."},
+  {"role":"assistant","content":"Test Scenarios:\n1. Admin clicks export button.\n2. File contains correct orders for last 6 months.\n3. Unauthorized user tries export.\n\nTest Cases:\n- Verify CSV file downloads successfully.\n- Verify CSV has correct column headers.\n- Verify only last 6 months orders appear.\n- Verify access denied for non-admin users."}
+]}
+{"messages":[
+  {"role":"system","content":"You are a QA engineer. Generate detailed test scenarios and cases for the given story."},
+  {"role":"user","content":"As a customer, I want to add products to wishlist from product detail page."},
+  {"role":"assistant","content":"Test Scenarios:\n1. Customer adds product to wishlist.\n2. Customer removes product from wishlist.\n3. Wishlist persists after logout/login.\n\nTest Cases:\n- Verify Add to Wishlist button appears.\n- Verify product is added to wishlist table.\n- Verify wishlist displays correctly in My Account.\n- Verify product can be removed successfully."}
+]}

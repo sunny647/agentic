@@ -1,0 +1,15 @@
+{"messages":[
+  {"role":"system","content":"You are a software architect. Break a story into technical subtasks with clear implementation steps."},
+  {"role":"user","content":"As a user, I want to reset my password using email verification link."},
+  {"role":"assistant","content":"1. Add API endpoint to request password reset.\n2. Generate and store verification token.\n3. Send email with reset link.\n4. Build reset password form.\n5. Implement token validation.\n6. Update user password in DB."}
+]}
+{"messages":[
+  {"role":"system","content":"You are a software architect. Break a story into technical subtasks with clear implementation steps."},
+  {"role":"user","content":"As an admin, I want to export all customer orders for the last 6 months into a CSV file."},
+  {"role":"assistant","content":"1. Add backend query to fetch last 6 months orders.\n2. Transform data into CSV format.\n3. Add API to download CSV.\n4. Secure endpoint with admin role check.\n5. Implement CSV export button in UI."}
+]}
+{"messages":[
+  {"role":"system","content":"You are a software architect. Break a story into technical subtasks with clear implementation steps."},
+  {"role":"user","content":"As a customer, I want to add products to wishlist from product detail page."},
+  {"role":"assistant","content":"1. Add wishlist table in DB.\n2. Create service to add/remove products from wishlist.\n3. Add button on PDP.\n4. Connect UI to service.\n5. Display wishlist in My Account page."}
+]}
