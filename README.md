@@ -14,13 +14,13 @@ cp .env.example .env
 2. **Run**
 ```bash
 npm run dev
-curl -X POST http://localhost:3000/api/story/run \
+curl -X POST https://agentic-i1ng.onrender.com/api/story/run \
   -H 'Content-Type: application/json' \
   -d '{
     "story": "As a user, I can log in with SSO and see my dashboard.",
     "context": {
       "repo": { "owner": "acme", "name": "shop" },
-      "techStack": ["SFCC", "Node", "React"],
+      "techStack": ["Node", "React"],
       "acceptanceCriteria": [
         "Login via OAuth2",
         "Session persisted",
@@ -36,6 +36,6 @@ curl -X POST http://localhost:3000/api/story/run \
 - If GitHub vars are missing, it will throw on PR step — comment out `git` node to test earlier steps only.
 
 ## Notes
-- Prompts are intentionally minimal; refine for your domains (SFCC, SFRA, Fabric Commerce, etc.).
+- Prompts are intentionally minimal; refine for your domains.
 - For production, replace naive parsers with **structured output** (JSON schemas) and add **guardrails**.
 - Extend with RAG by injecting architecture context before `codingAgent`.
