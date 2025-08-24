@@ -36,6 +36,6 @@ curl -X POST http://localhost:3000/api/story/run \
 - If GitHub vars are missing, it will throw on PR step — comment out `git` node to test earlier steps only.
 
 ## Notes
-- Prompts are intentionally minimal; refine for your domains (SFCC, SFRA, Fabric Commerce, etc.).
+- Prompts are intentionally minimal; refine for your domains
 - For production, replace naive parsers with **structured output** (JSON schemas) and add **guardrails**.
 - Extend with RAG by injecting architecture context before `codingAgent`.
