@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Story Input - Agentic Supervisor</title>
+  <title>Jira Issue Input - Agentic Supervisor</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 2em; }
     label { display: block; margin-top: 1em; }
@@ -12,22 +12,16 @@
   </style>
 </head>
 <body>
-  <h1>Submit a Story for RCA</h1>
-  <form id="storyForm">
-    <label for="story">Story</label>
-    <textarea id="story" name="story" rows="4" required></textarea>
+  <h1>Submit Jira Issue Summary, Description & Key</h1>
+  <form id="jiraForm">
+    <label for="key">Issue Key</label>
+    <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required>
 
-    <label for="repoOwner">Repo Owner</label>
-    <input type="text" id="repoOwner" name="repoOwner" placeholder="e.g. acme">
+    <label for="summary">Summary</label>
+    <input type="text" id="summary" name="summary" required>
 
-    <label for="repoName">Repo Name</label>
-    <input type="text" id="repoName" name="repoName" placeholder="e.g. shop">
-
-    <label for="techStack">Tech Stack (comma separated)</label>
-    <input type="text" id="techStack" name="techStack" placeholder="e.g. SFCC, Node, React">
-
-    <label for="acceptanceCriteria">Acceptance Criteria (one per line)</label>
-    <textarea id="acceptanceCriteria" name="acceptanceCriteria" rows="3"></textarea>
+    <label for="description">Description</label>
+    <textarea id="description" name="description" rows="4" required></textarea>
 
     <button type="submit">Submit</button>
   </form>
@@ -35,20 +29,20 @@
   <div class="result" id="result" style="display:none;"></div>
 
   <script>
-    document.getElementById('storyForm').addEventListener('submit', async function(e) {
+    document.getElementById('jiraForm').addEventListener('submit', async function(e) {
       e.preventDefault();
-      const story = document.getElementById('story').value;
-      const repoOwner = document.getElementById('repoOwner').value;
-      const repoName = document.getElementById('repoName').value;
-      const techStack = document.getElementById('techStack').value.split(',').map(s => s.trim()).filter(Boolean);
-      const acceptanceCriteria = document.getElementById('acceptanceCriteria').value.split('\n').map(s => s.trim()).filter(Boolean);
+      const key = document.getElementById('key').value;
+      const summary = document.getElementById('summary').value;
+      const description = document.getElementById('description').value;
 
+      // Construct minimal Jira-like payload
       const payload = {
-        story,
-        context: {
-          repo: { owner: repoOwner, name: repoName },
-          techStack,
-          acceptanceCriteria
+        issue: {
+          key,
+          fields: {
+            summary,
+            description
+          }
         }
       };
 
