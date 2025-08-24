@@ -9,7 +9,6 @@ export const StoryStateSchema = z.object({
       projectKey: z.string().optional(),
       techStack: z.array(z.string()).optional(),
       constraints: z.array(z.string()).optional(),
-      acceptanceCriteria: z.array(z.string()).optional(),
     })
     .default({}),
   estimation: z

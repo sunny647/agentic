@@ -1,12 +1,72 @@
-export async function supervisorAgent(state) {
-  const missing = [];
-  if (!state.estimation) missing.push('estimation');
-  if (!state.decomposition) missing.push('decomposition');
-  if (!state.code) missing.push('coding');
-  if (!state.tests) missing.push('testing');
-  if (!state.git) missing.push('git');
+// ─────────────────────────────────────────────────────────────────────────────
+// File: src/agents/supervisor.agent.js
+// ─────────────────────────────────────────────────────────────────────────────
+import OpenAI from "openai";
 
-  // Fix: ensure logs is always an array
-  const logs = Array.isArray(state.logs) ? state.logs : [];
-  return { ...state, logs: [...logs, `supervisor:routing:${missing.join(',')}`] };
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+/**
+ * Supervisor Agent
+ * - Reviews outputs from subagents (estimation, decomposition, coding, testing, git)
+ * - Validates completeness, correctness, and consistency
+ * - Decides which steps are missing or need revision
+ */
+export async function supervisorAgent(state) {
+  const {
+    estimation,
+    decomposition,
+    code,
+    tests,
+    git,
+    logs = [],
+  } = state;
+
+  const reviewPrompt = `
+You are the Supervisor Agent.
+Your role is to REVIEW outputs from sub-agents and validate them.
+
+### Instructions:
+1. Check decomposition → Are FE, BE, Shared, and Risks sections present, non-empty, and relevant?
+2. Check estimation → Is there at least a numeric effort or time breakdown?
+3. Check code → Is it aligned with decomposition tasks?
+4. Check tests → Do they cover acceptance criteria?
+5. Check git → Is there a branch/commit info?
+
+Story context:
+${JSON.stringify(state.story, null, 2)}
+
+Outputs so far:
+- Estimation: ${estimation ? JSON.stringify(estimation) : "Missing"}
+    Acceptance Criteria:
+  "status": "ok" | "needs_revision",
+  "missing": [ "estimation" | "decomposition" | "code" | "tests" | "git" ],
+  "revisionNeeded": [ "estimation" | "decomposition" | "code" | "tests" | "git" ],
+  "feedback": "Detailed supervisor review notes"
+}
+  `;
+
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [{ role: "system", content: reviewPrompt }],
+    response_format: { type: "json_object" }
+  });
+
+  let supervisorDecision;
+  try {
+    supervisorDecision = JSON.parse(response.choices[0].message.content);
+  } catch (err) {
+    supervisorDecision = {
+      status: "error",
+      missing: [],
+      revisionNeeded: [],
+      feedback: "Supervisor failed to parse LLM response"
+    };
+  }
+
+  return {
+    ...state,
+    supervisorDecision,
+    logs: [...logs, `supervisor:review:${JSON.stringify(supervisorDecision)}`]
+  };
 }
