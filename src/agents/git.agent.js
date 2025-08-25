@@ -2,6 +2,7 @@
 // File: src/agents/git.agent.js
 // ─────────────────────────────────────────────────────────────
 import { codeModel } from '../llm/models.js';
+import logger from '../logger.js';
 
 /**
  * Git Agent
@@ -9,7 +10,7 @@ import { codeModel } from '../llm/models.js';
  * - Returns a mapping of subtask to generated code
  */
 export async function gitAgent(state) {
-  console.log('gitAgent called', state);
+  logger.info({ state }, 'gitAgent called');
   
   const decomposition = state.decomposition || {};
   const allTasks = [
@@ -36,7 +37,7 @@ export async function gitAgent(state) {
   ]);
   let files = {};
   let notes = '';
-  console.log('gitAgent LLM response:', resp.content);
+  logger.info({ content: resp.content }, 'gitAgent LLM response');
   try {
     files = JSON.parse(resp.content);
   } catch (err) {

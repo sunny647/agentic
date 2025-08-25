@@ -2,6 +2,7 @@
 // File: src/agents/supervisor.agent.js
 // ─────────────────────────────────────────────────────────────────────────────
 import OpenAI from "openai";
+import logger from '../logger.js';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -12,7 +13,7 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
  * - Decides which steps are missing or need revision
  */
 export async function supervisorAgent(state) {
-  console.log('supervisorAgent called', state);
+  logger.info({ state }, 'supervisorAgent called');
 
   const {
     estimation,
@@ -62,7 +63,7 @@ Return JSON in this exact structure:
     response_format: { type: "json_object" }
   });
   const text = response.choices[0].message.content;
-  console.log('supervisorAgent LLM response:', text);
+  logger.info({ text }, 'supervisorAgent LLM response');
 
   let supervisorDecision;
   try {

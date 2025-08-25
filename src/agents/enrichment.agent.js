@@ -2,10 +2,11 @@
 // File: src/agents/enrichment.agent.js
 // ─────────────────────────────────────────────────────────────────────────────
 import { smallModel } from '../llm/models.js';
+import logger from '../logger.js';
 // import { jiraClient } from '../mcp/jira.client.js'; // wrapper for MCP Jira server
 
 export async function enrichmentAgent(state) {
-  console.log('enrichmentAgent called', state);
+  logger.info({ state }, 'enrichmentAgent called');
 
   const prompt = [
     {
@@ -25,12 +26,12 @@ export async function enrichmentAgent(state) {
   let text = resp.content?.toString?.() || resp.content;
   // Remove markdown code block markers if present
   text = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
-  console.log('Raw enrichment model output:', text);
+  logger.info({ text }, 'Raw enrichment model output');
 
   let enriched = {};
   try {
     enriched = JSON.parse(text);
-    console.log(`Enriched story: ${JSON.stringify(enriched)}`);
+  logger.info({ enriched }, 'Enriched story');
   } catch {
     enriched = {
       description: state.story,
@@ -42,13 +43,13 @@ export async function enrichmentAgent(state) {
   // Update Jira story (if id present)
   if (state.jiraId) {
     try {
-      console.log(`Enriched Jira story ${JSON.stringify(enriched)}...`);
+  logger.info({ enriched }, 'Enriched Jira story');
       //   await jiraClient.updateStory(state.jiraId, {
       //     description: enriched.description,
       //     acceptanceCriteria: enriched.acceptanceCriteria,
       //   });
     } catch (err) {
-      console.error(`Jira update failed: ${err.message}`);
+  logger.error({ err }, 'Jira update failed');
     }
   }
 
@@ -63,6 +64,6 @@ export async function enrichmentAgent(state) {
     },
     logs: [...logs, 'enrichment:done'],
   };
-  console.log('enrichmentAgent returning state:', JSON.stringify(nextState, null, 2));
+  logger.info({ nextState }, 'enrichmentAgent returning state');
   return nextState;
 }

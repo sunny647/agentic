@@ -2,9 +2,10 @@
 // File: src/agents/testing.agent.js
 // ─────────────────────────────────────────────────────────────────────────────
 import { smallModel } from '../llm/models.js';
+import logger from '../logger.js';
 
 export async function testingAgent(state) {
-  console.log('testingAgent called', state);
+  logger.info({ state }, 'testingAgent called');
 
   const prompt = [
     {
@@ -23,7 +24,7 @@ Risks: ${(state.decomposition?.risks || []).join('\n')}`,
 
   const resp = await smallModel.invoke(prompt);
   const text = resp.content?.toString?.() || resp.content;
-  console.log('testingAgent LLM response:', text);
+  logger.info({ text }, 'testingAgent LLM response');
 
   // Extract scenarios and steps
   const scenarios = text
@@ -39,7 +40,7 @@ Risks: ${(state.decomposition?.risks || []).join('\n')}`,
   const logs = Array.isArray(state.logs) ? state.logs : [];
   
     // Map tests for supervisor
-    console.log('testingAgent mapped tests:', { raw: text, scenarios, cases });
+    logger.info({ raw: text, scenarios, cases }, 'testingAgent mapped tests');
 
   return {
     ...state,

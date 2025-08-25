@@ -70,5 +70,11 @@ export function buildStoryFlow() {
 export async function runPipeline(input) {
   const app = buildStoryFlow();
   const init = defaultState(input);
-  return await app.invoke(init);
+  const result = await app.invoke(init);
+  // Write logs to a file
+  import('fs').then(fs => {
+    const logData = Array.isArray(result.logs) ? result.logs.join('\n') : String(result.logs);
+    fs.writeFileSync('pipeline-logs.txt', logData, 'utf8');
+  });
+  return result;
 }

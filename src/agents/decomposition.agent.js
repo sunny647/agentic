@@ -2,11 +2,12 @@
 // File: src/agents/decomposition.agent.js
 // ─────────────────────────────────────────────────────────────────────────────
 import { smallModel } from '../llm/models.js';
+import logger from '../logger.js';
 import { getContext } from '../context/context.manager.js';
 
 export async function decompositionAgent(state) {
-  console.log('decompositionAgent called', state.enrichedStory);
-  console.log('decompositionAgent full state:', JSON.stringify(state, null, 2));
+  logger.info({ enrichedStory: state.enrichedStory }, 'decompositionAgent called');
+  logger.info({ state }, 'decompositionAgent full state');
 
   // Always pass the full state to getContext for robustness
   const ctx = await getContext('decomposition', state);
@@ -28,7 +29,7 @@ export async function decompositionAgent(state) {
 
   const resp = await smallModel.invoke(prompt);
   const text = resp.content?.toString?.() || resp.content;
-  console.log('decompositionAgent LLM response:', text);
+  logger.info({ text }, 'decompositionAgent LLM response');
 
   // Improved section extraction
   const sectionRegex = /(?:^|\n)\s*(FE|Frontend|BE|Backend|Shared|Risks)\s*[:\-]?\s*([\s\S]*?)(?=\n\s*(FE|Frontend|BE|Backend|Shared|Risks)\s*[:\-]?|$)/gi;
@@ -57,7 +58,7 @@ export async function decompositionAgent(state) {
     ...toList(be).map((task) => ({ type: 'BE', task })),
     ...toList(shared).map((task) => ({ type: 'Shared', task })),
   ];
-  console.log('decompositionAgent mapped codingTasks:', codingTasks);
+  logger.info({ codingTasks }, 'decompositionAgent mapped codingTasks');
 
   return {
     ...state,
