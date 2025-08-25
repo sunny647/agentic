@@ -5,6 +5,8 @@ import { smallModel } from '../llm/models.js';
 // import { jiraClient } from '../mcp/jira.client.js'; // wrapper for MCP Jira server
 
 export async function enrichmentAgent(state) {
+  console.log('enrichmentAgent called', state);
+
   const prompt = [
     {
       role: 'system',
@@ -20,11 +22,15 @@ export async function enrichmentAgent(state) {
   ];
 
   const resp = await smallModel.invoke(prompt);
-  const text = resp.content?.toString?.() || resp.content;
+  let text = resp.content?.toString?.() || resp.content;
+  // Remove markdown code block markers if present
+  text = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
+  console.log('Raw enrichment model output:', text);
 
   let enriched = {};
   try {
     enriched = JSON.parse(text);
+    console.log(`Enriched story: ${JSON.stringify(enriched)}`);
   } catch {
     enriched = {
       description: state.story,
@@ -48,7 +54,7 @@ export async function enrichmentAgent(state) {
 
   const logs = Array.isArray(state.logs) ? state.logs : [];
 
-  return {
+  const nextState = {
     ...state,
     enrichedStory: enriched.description,
     context: {
@@ -57,4 +63,6 @@ export async function enrichmentAgent(state) {
     },
     logs: [...logs, 'enrichment:done'],
   };
+  console.log('enrichmentAgent returning state:', JSON.stringify(nextState, null, 2));
+  return nextState;
 }

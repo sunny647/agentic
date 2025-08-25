@@ -2,26 +2,47 @@
 // File: src/agents/decomposition.agent.js
 // ─────────────────────────────────────────────────────────────────────────────
 import { smallModel } from '../llm/models.js';
+import { getContext } from '../context/context.manager.js';
 
 export async function decompositionAgent(state) {
+  console.log('decompositionAgent called', state.enrichedStory);
+  console.log('decompositionAgent full state:', JSON.stringify(state, null, 2));
+
+  // Always pass the full state to getContext for robustness
+  const ctx = await getContext('decomposition', state);
+
   const prompt = [
     {
       role: 'system',
-      content: `You are a tech lead. 
-      Split the Jira story into FE (Frontend), BE (Backend), Shared technical tasks, and Risks. 
-      Return clear bullet points under each heading.`
+      content:
+        `You are a senior tech lead. Decompose the enriched story into clear technical subtasks FE (Frontend) and BE (Backend). 
+        Use the following context (architecture docs, code references, acceptance criteria) 
+        to ensure correctness and alignment.`,
     },
-    { role: 'user', content: `Story: ${state.story}` },
+    { role: 'user', content: JSON.stringify({
+        story: state.enrichedStory || state.story,
+        acceptanceCriteria: ctx.acceptanceCriteria,
+        contextDocs: ctx.documents,
+      }, null, 2)},
   ];
 
   const resp = await smallModel.invoke(prompt);
   const text = resp.content?.toString?.() || resp.content;
+  console.log('decompositionAgent LLM response:', text);
 
-  // Extract sections with regex (light parsing, no validation)
-  const fe = /FE(?:-|:)?([\s\S]*?)BE/i.exec(text)?.[1] || '';
-  const be = /BE(?:-|:)?([\s\S]*?)(Shared|Risks|$)/i.exec(text)?.[1] || '';
-  const shared = /Shared(?:-|:)?([\s\S]*?)(Risks|$)/i.exec(text)?.[1] || '';
-  const risks = /Risks(?:-|:)?([\s\S]*)/i.exec(text)?.[1] || '';
+  // Improved section extraction
+  const sectionRegex = /(?:^|\n)\s*(FE|Frontend|BE|Backend|Shared|Risks)\s*[:\-]?\s*([\s\S]*?)(?=\n\s*(FE|Frontend|BE|Backend|Shared|Risks)\s*[:\-]?|$)/gi;
+  const sections = {};
+  let match;
+  while ((match = sectionRegex.exec(text))) {
+    const key = match[1].toLowerCase();
+    sections[key] = match[2].trim();
+  }
+
+  const fe = sections.fe || sections.frontend || '';
+  const be = sections.be || sections.backend || '';
+  const shared = sections.shared || '';
+  const risks = sections.risks || '';
 
   const toList = (s) =>
     s.split(/\n|\r/)
@@ -29,6 +50,14 @@ export async function decompositionAgent(state) {
       .filter(Boolean);
 
   const logs = Array.isArray(state.logs) ? state.logs : [];
+
+  // Map tasks for coding agent
+  const codingTasks = [
+    ...toList(fe).map((task) => ({ type: 'FE', task })),
+    ...toList(be).map((task) => ({ type: 'BE', task })),
+    ...toList(shared).map((task) => ({ type: 'Shared', task })),
+  ];
+  console.log('decompositionAgent mapped codingTasks:', codingTasks);
 
   return {
     ...state,
@@ -39,6 +68,7 @@ export async function decompositionAgent(state) {
       risks: toList(risks),
       rawOutput: text // keep full text for supervisor validation
     },
+    codingTasks,
     logs: [...logs, 'decomposition:done'],
   };
 }

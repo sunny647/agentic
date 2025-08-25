@@ -7,15 +7,19 @@
     "start": "node --env-file=.env src/server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "pino": "^9.2.0",
-    "pino-http": "^10.0.0",
-    "openai": "^4.57.0",
-    "@langchain/core": "^0.3.10",
-    "@langchain/openai": "^0.3.8",
-    "@langchain/langgraph": "^0.2.16",
-    "zod": "^3.23.8",
-    "dotenv": "^16.4.5",
-    "uuid": "^9.0.1"
+    "@chroma-core/default-embed": "^0.1.8",
+    "@langchain/core": "^0.3.72",
+    "@langchain/langgraph": "^0.4.6",
+    "@langchain/langgraph-supervisor": "^0.0.18",
+    "@langchain/openai": "^0.6.9",
+    "chromadb": "^3.0.14",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "openai": "^5.15.0",
+    "pg": "^8.16.3",
+    "pino": "^9.9.0",
+    "pino-http": "^10.5.0",
+    "uuid": "^11.1.0",
+    "zod": "^4.1.1"
   }
 }

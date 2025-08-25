@@ -1,9 +1,14 @@
 import { smallModel } from '../llm/models.js';
 
 export async function estimationAgent(state) {
+  console.log('estimationAgent called', state.decomposition);
+  
   const context = state.context || {};
-    const acceptanceCriteria = Array.isArray(state.acceptanceCriteria)
-      ? state.acceptanceCriteria
+  // Robustly source acceptanceCriteria from state or context
+  const acceptanceCriteria = Array.isArray(state.acceptanceCriteria)
+    ? state.acceptanceCriteria
+    : Array.isArray(context.acceptanceCriteria)
+      ? context.acceptanceCriteria
       : [];
 
   const prompt = [
@@ -22,6 +27,7 @@ export async function estimationAgent(state) {
 
   const resp = await smallModel.invoke(prompt);
   const text = resp.content?.toString?.() || resp.content;
+  console.log('estimationAgent LLM response:', text);
 
   let estimation;
   try {
@@ -35,6 +41,8 @@ export async function estimationAgent(state) {
   }
 
   const logs = Array.isArray(state.logs) ? state.logs : [];
+  // Map estimation for supervisor
+  console.log('estimationAgent mapped estimation:', estimation);
   return {
     ...state,
     estimation,

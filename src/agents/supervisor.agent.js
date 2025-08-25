@@ -12,6 +12,8 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
  * - Decides which steps are missing or need revision
  */
 export async function supervisorAgent(state) {
+  console.log('supervisorAgent called', state);
+
   const {
     estimation,
     decomposition,
@@ -32,12 +34,20 @@ Your role is to REVIEW outputs from sub-agents and validate them.
 4. Check tests → Do they cover acceptance criteria?
 5. Check git → Is there a branch/commit info?
 
+IMPORTANT: Return your response as a JSON object.
+
 Story context:
 ${JSON.stringify(state.story, null, 2)}
 
 Outputs so far:
 - Estimation: ${estimation ? JSON.stringify(estimation) : "Missing"}
-    Acceptance Criteria:
+- Decomposition: ${decomposition ? JSON.stringify(decomposition) : "Missing"}
+- Code: ${code ? JSON.stringify(code) : "Missing"}
+- Tests: ${tests ? JSON.stringify(tests) : "Missing"}
+- Git: ${git ? JSON.stringify(git) : "Missing"}
+
+Return JSON in this exact structure:
+{
   "status": "ok" | "needs_revision",
   "missing": [ "estimation" | "decomposition" | "code" | "tests" | "git" ],
   "revisionNeeded": [ "estimation" | "decomposition" | "code" | "tests" | "git" ],
@@ -51,10 +61,12 @@ Outputs so far:
     messages: [{ role: "system", content: reviewPrompt }],
     response_format: { type: "json_object" }
   });
+  const text = response.choices[0].message.content;
+  console.log('supervisorAgent LLM response:', text);
 
   let supervisorDecision;
   try {
-    supervisorDecision = JSON.parse(response.choices[0].message.content);
+    supervisorDecision = JSON.parse(text);
   } catch (err) {
     supervisorDecision = {
       status: "error",

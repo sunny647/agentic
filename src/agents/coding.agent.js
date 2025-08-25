@@ -1,19 +1,21 @@
 import { codeModel } from '../llm/models.js';
 
 export async function codingAgent(state) {
+  console.log('codingAgent called', state);
+
   const tasks = [
     ...(state.decomposition?.feTasks || []),
     ...(state.decomposition?.beTasks || []),
     ...(state.decomposition?.sharedTasks || []),
   ];
 
-  if (!tasks.length) {
-    return {
-      ...state,
-      code: null,
-      logs: [...(state.logs || []), 'coding:skipped:no_tasks'],
-    };
-  }
+    if (!state.codingTasks || state.codingTasks.length === 0) {
+      console.log('codingAgent: no codingTasks found, skipping code generation');
+      return {
+        ...state,
+        logs: [...(state.logs || []), 'coding:skipped:no_tasks'],
+      };
+    }
 
   const system = `You are a senior full-stack engineer. 
   Generate minimal, production-quality code diffs. 
@@ -31,8 +33,8 @@ export async function codingAgent(state) {
     { role: 'system', content: system },
     { role: 'user', content: user },
   ]);
-
   const text = resp.content?.toString?.() || resp.content;
+  console.log('codingAgent LLM response:', text);
   let files = {};
   let validationNotes = [];
 
@@ -57,9 +59,11 @@ export async function codingAgent(state) {
     }
   }
 
+    // Map code for supervisor
+    console.log('codingAgent mapped code:', generatedCode);
   return {
     ...state,
-    code: { files, validationNotes },
+      code: generatedCode,
     logs: [...(state.logs || []), 'coding:done'],
   };
 }

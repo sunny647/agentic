@@ -7,13 +7,14 @@ import { decompositionAgent } from "../agents/decomposition.agent.js";
 import { estimationAgent } from "../agents/estimation.agent.js";
 import { codingAgent } from "../agents/coding.agent.js";
 import { testingAgent } from "../agents/testing.agent.js";
-import { gitAgent } from "../agents/git.agent.js";
 import { supervisorAgent } from "../agents/supervisor.agent.js";
+import { defaultState } from "./schema.js";
 
 export function buildStoryFlow() {
   const workflow = new StateGraph({
     channels: {
       story: null,
+      enrichedStory: null,
       decomposition: null,
       estimation: null,
       code: null,
@@ -27,19 +28,18 @@ export function buildStoryFlow() {
 
   // Register agents
   workflow.addNode("enrichment", enrichmentAgent);
-  workflow.addNode("decomposition", decompositionAgent);
-  workflow.addNode("estimation", estimationAgent);
+  workflow.addNode("decompose", decompositionAgent);
+  workflow.addNode("estimate", estimationAgent);
   workflow.addNode("coding", codingAgent);
   workflow.addNode("testing", testingAgent);
-  workflow.addNode("git", gitAgent);
   workflow.addNode("supervisor", supervisorAgent);
 
   // Standard forward flow
-  workflow.addEdge("decomposition", "estimation");
-  workflow.addEdge("estimation", "coding");
+  workflow.addEdge("enrichment", "decompose");
+  workflow.addEdge("decompose", "estimate");
+  workflow.addEdge("estimate", "coding");
   workflow.addEdge("coding", "testing");
-  workflow.addEdge("testing", "git");
-  workflow.addEdge("git", "supervisor");
+  workflow.addEdge("testing", "supervisor");
 
   // Supervisor decision logic
   workflow.addConditionalEdges("supervisor", (state) => {
@@ -55,9 +55,8 @@ export function buildStoryFlow() {
     // Route back based on revisionNeeded
     if (revisionNeeded.includes("coding")) return ["coding"];
     if (revisionNeeded.includes("testing")) return ["testing"];
-    if (revisionNeeded.includes("decomposition")) return ["decomposition"];
-    if (revisionNeeded.includes("estimation")) return ["estimation"];
-    if (revisionNeeded.includes("git")) return ["git"];
+    if (revisionNeeded.includes("decompose")) return ["decompose"];
+    if (revisionNeeded.includes("estimate")) return ["estimate"];
 
     return []; // all good, end workflow
   });

@@ -1,8 +1,10 @@
 import { z } from 'zod';
+import { en } from 'zod/v4/locales';
 
 export const StoryStateSchema = z.object({
   requestId: z.string(),
   story: z.string(),
+  enrichedStory: z.string().optional(),
   context: z
     .object({
       repo: z.object({ owner: z.string().optional(), name: z.string().optional() }).optional(),
@@ -31,10 +33,6 @@ export const StoryStateSchema = z.object({
   tests: z
     .object({ scenarios: z.array(z.string()).default([]), cases: z.array(z.string()).default([]) })
     .optional(),
-  git: z
-    .object({ branch: z.string().optional(), prUrl: z.string().optional(), commitSha: z.string().optional() })
-    .optional(),
-  logs: z.array(z.string()).default([]),
 });
 
 export const defaultState = (partial) => ({ logs: [], ...partial });

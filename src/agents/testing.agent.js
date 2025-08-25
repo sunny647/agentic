@@ -4,6 +4,8 @@
 import { smallModel } from '../llm/models.js';
 
 export async function testingAgent(state) {
+  console.log('testingAgent called', state);
+
   const prompt = [
     {
       role: 'system',
@@ -21,6 +23,7 @@ Risks: ${(state.decomposition?.risks || []).join('\n')}`,
 
   const resp = await smallModel.invoke(prompt);
   const text = resp.content?.toString?.() || resp.content;
+  console.log('testingAgent LLM response:', text);
 
   // Extract scenarios and steps
   const scenarios = text
@@ -34,6 +37,9 @@ Risks: ${(state.decomposition?.risks || []).join('\n')}`,
     .filter((l) => /^(Given|When|Then|And|But)\b/i.test(l));
 
   const logs = Array.isArray(state.logs) ? state.logs : [];
+  
+    // Map tests for supervisor
+    console.log('testingAgent mapped tests:', { raw: text, scenarios, cases });
 
   return {
     ...state,
