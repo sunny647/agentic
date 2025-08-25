@@ -2,8 +2,8 @@ import { smallModel } from '../llm/models.js';
 import logger from '../logger.js';
 
 export async function estimationAgent(state) {
-  logger.info({ decomposition: state.decomposition }, 'estimationAgent called');
-  
+  logger.info({ state: state }, 'estimationAgent called');
+
   const context = state.context || {};
   // Robustly source acceptanceCriteria from state or context
   const acceptanceCriteria = Array.isArray(state.acceptanceCriteria)
@@ -12,15 +12,16 @@ export async function estimationAgent(state) {
       ? context.acceptanceCriteria
       : [];
 
+  const codingTasks = Array.isArray(state.codingTasks) ? state.codingTasks : [];
   const prompt = [
     {
       role: 'system',
       content:
-        'You are a senior engineering manager. Provide an effort estimate with story points (0.5–13) and a confidence score (0–1). Be concise. Consider complexity, unknowns, dependencies. Output in JSON: {"storyPoints": number, "confidence": number, "notes": "short reasoning"}',
+        'You are a senior engineering manager. Provide an effort estimate with story points (0.5–13) and a confidence score (0–1). Be concise. Consider complexity, unknowns, dependencies. Output in JSON: {"storyPoints": number, "confidence": number, "notes": "short reasoning"} for each coding task and overall story.',
     },
     {
       role: 'user',
-      content: `Story: ${state.story}\nAcceptance Criteria:\n${acceptanceCriteria.join(
+      content: `Story: ${state.enrichedStory || state.story}\nCoding Tasks:\n${codingTasks.map(task => `- [${task.type}] ${task.task}`).join('\n')}\nAcceptance Criteria:\n${acceptanceCriteria.join(
         '\n'
       )}`,
     },

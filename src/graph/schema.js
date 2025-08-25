@@ -30,6 +30,7 @@ export const StoryStateSchema = z.object({
       instructions: z.array(z.string()).default([]),
     })
     .optional(),
+  codingTasks: z.array(z.object({ type: z.string(), task: z.string() })).default([]),
   tests: z
     .object({ scenarios: z.array(z.string()).default([]), cases: z.array(z.string()).default([]) })
     .optional(),

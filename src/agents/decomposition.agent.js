@@ -16,57 +16,64 @@ export async function decompositionAgent(state) {
     {
       role: 'system',
       content:
-        `You are a senior tech lead. Decompose the enriched story into clear technical subtasks FE (Frontend) and BE (Backend). 
-        Use the following context (architecture docs, code references, acceptance criteria) 
-        to ensure correctness and alignment.`,
+        `You are a senior tech lead. Decompose the enriched story into clear technical subtasks for FE (Frontend) and BE (Backend).
+        Respond ONLY with a strict JSON object in this format:
+        {
+          "feTasks": ["<FE task 1>", "<FE task 2>", ...],
+          "beTasks": ["<BE task 1>", "<BE task 2>", ...],
+          "sharedTasks": ["<Shared task 1>", ...],
+          "risks": ["<Risk 1>", ...]
+        }
+        Do not include any markdown, explanation, or extra text. Only valid JSON. Use the following context (architecture docs, code references, acceptance criteria) to ensure correctness and alignment.`,
     },
-    { role: 'user', content: JSON.stringify({
+    {
+      role: 'user', content: JSON.stringify({
         story: state.enrichedStory || state.story,
         acceptanceCriteria: ctx.acceptanceCriteria,
         contextDocs: ctx.documents,
-      }, null, 2)},
+      }, null, 2)
+    },
   ];
 
   const resp = await smallModel.invoke(prompt);
   const text = resp.content?.toString?.() || resp.content;
   logger.info({ text }, 'decompositionAgent LLM response');
 
-  // Improved section extraction
-  const sectionRegex = /(?:^|\n)\s*(FE|Frontend|BE|Backend|Shared|Risks)\s*[:\-]?\s*([\s\S]*?)(?=\n\s*(FE|Frontend|BE|Backend|Shared|Risks)\s*[:\-]?|$)/gi;
-  const sections = {};
-  let match;
-  while ((match = sectionRegex.exec(text))) {
-    const key = match[1].toLowerCase();
-    sections[key] = match[2].trim();
+  // Try to parse LLM output as JSON first
+  let feTasks = [];
+  let beTasks = [];
+  let sharedTasks = [];
+  let risksTasks = [];
+  let parsed = null;
+  try {
+    parsed = JSON.parse(text);
+    feTasks = Array.isArray(parsed.feTasks) ? parsed.feTasks : [];
+    beTasks = Array.isArray(parsed.beTasks) ? parsed.beTasks : [];
+    sharedTasks = Array.isArray(parsed.sharedTasks) ? parsed.sharedTasks : [];
+    risksTasks = Array.isArray(parsed.risks) ? parsed.risks : [];
+  } catch (e) {
+    // Fallback: extract from markdown if JSON parsing fails
+    logger.warn({ text }, 'decompositionAgent LLM response is not valid JSON');
   }
 
-  const fe = sections.fe || sections.frontend || '';
-  const be = sections.be || sections.backend || '';
-  const shared = sections.shared || '';
-  const risks = sections.risks || '';
-
-  const toList = (s) =>
-    s.split(/\n|\r/)
-      .map((l) => l.replace(/^[-*\d.\s]+/, '').trim())
-      .filter(Boolean);
-
+  // If markdown fallback is needed, implement here (currently not used)
   const logs = Array.isArray(state.logs) ? state.logs : [];
 
   // Map tasks for coding agent
   const codingTasks = [
-    ...toList(fe).map((task) => ({ type: 'FE', task })),
-    ...toList(be).map((task) => ({ type: 'BE', task })),
-    ...toList(shared).map((task) => ({ type: 'Shared', task })),
+    ...feTasks.map((task) => ({ type: 'FE', task })),
+    ...beTasks.map((task) => ({ type: 'BE', task })),
+    ...sharedTasks.map((task) => ({ type: 'Shared', task })),
   ];
   logger.info({ codingTasks }, 'decompositionAgent mapped codingTasks');
 
   return {
     ...state,
     decomposition: {
-      feTasks: toList(fe),
-      beTasks: toList(be),
-      sharedTasks: toList(shared),
-      risks: toList(risks),
+      feTasks,
+      beTasks,
+      sharedTasks,
+      risks: risksTasks,
       rawOutput: text // keep full text for supervisor validation
     },
     codingTasks,
