@@ -28,10 +28,10 @@ async function runTask(task) {
     const args = JSON.parse(toolCall.function.arguments);
     const result = await tool.execute(args);
 
-    console.log(`🛠️ Tool used: ${tool.name}`);
+    console.log(`Tool used: ${tool.name}`);
     console.log(result);
   } else {
-    console.log("💬 LLM response:", response.choices[0].message.content);
+    console.log("LLM response:", response.choices[0].message.content);
   }
 }
 

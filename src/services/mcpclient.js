@@ -1,50 +1,30 @@
-// mcpClient.js
-import WebSocket from "ws";
-import { v4 as uuidv4 } from "uuid";
+// clientExample.js
+import { MCPClient } from "./mcpClient.js";
 
-export class MCPClient {
-  constructor(url) {
-    this.url = url;
-    this.ws = null;
-    this.pending = new Map();
-  }
+async function run() {
+  const client = new MCPClient("ws://localhost:8080");
+  await client.connect();
 
-  async connect() {
-    return new Promise((resolve, reject) => {
-      this.ws = new WebSocket(this.url);
+  // 1. Create a branch
+  const branch = await client.call("github.createBranch", { branchName: "feature/test-mcp" });
+  console.log("Branch created:", branch);
 
-      this.ws.on("open", () => {
-        console.log("✅ Connected to MCP server:", this.url);
-        resolve();
-      });
+  // 2. Update a file
+  const fileUpdate = await client.call("github.updateFile", {
+    branch: "feature/test-mcp",
+    path: "README.md",
+    content: "Hello from MCP!",
+    message: "Test MCP update",
+  });
+  console.log("File updated:", fileUpdate);
 
-      this.ws.on("message", (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.id && this.pending.has(msg.id)) {
-          const { resolve, reject } = this.pending.get(msg.id);
-          this.pending.delete(msg.id);
-
-          if (msg.error) reject(msg.error);
-          else resolve(msg.result);
-        }
-      });
-
-      this.ws.on("error", reject);
-    });
-  }
-
-  async call(method, params = {}) {
-    const id = uuidv4();
-    const payload = {
-      jsonrpc: "2.0",
-      id,
-      method,
-      params,
-    };
-
-    return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.ws.send(JSON.stringify(payload));
-    });
-  }
+  // 3. Create a PR
+  const pr = await client.call("github.createPR", {
+    branch: "feature/test-mcp",
+    title: "MCP Test PR",
+    body: "This PR was created via MCP client/server",
+  });
+  console.log("PR created:", pr);
 }
+
+run();
