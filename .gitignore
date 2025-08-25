@@ -1,2 +1,4 @@
 .env
 node_modules/
+pipeline-logs.txt
+*.log
