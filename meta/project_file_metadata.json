@@ -1,0 +1,161 @@
+[
+  {
+    "path": "src/agents/coding.agent.js",
+    "name": "coding.agent.js",
+    "functions": [
+      "codingAgent(state): Generates code for codingTasks using LLM, validates output, returns code map."
+    ]
+  },
+  {
+    "path": "src/agents/decomposition.agent.js",
+    "name": "decomposition.agent.js",
+    "functions": [
+      "decompositionAgent(state): Decomposes enriched story into FE/BE/shared tasks and risks, maps codingTasks."
+    ]
+  },
+  {
+    "path": "src/agents/enrichment.agent.js",
+    "name": "enrichment.agent.js",
+    "functions": [
+      "enrichmentAgent(state): Enriches user story, expands acceptance criteria, updates context."
+    ]
+  },
+  {
+    "path": "src/agents/estimation.agent.js",
+    "name": "estimation.agent.js",
+    "functions": [
+      "estimationAgent(state): Estimates story points and confidence for codingTasks."
+    ]
+  },
+  {
+    "path": "src/agents/supervisor.agent.js",
+    "name": "supervisor.agent.js",
+    "functions": [
+      "supervisorAgent(state): Reviews outputs from all agents, validates completeness, provides feedback, routes workflow."
+    ]
+  },
+  {
+    "path": "src/agents/testing.agent.js",
+    "name": "testing.agent.js",
+    "functions": [
+      "testingAgent(state): Generates test scenarios and Gherkin cases for code and story."
+    ]
+  },
+  {
+    "path": "src/agents/git.agent.js",
+    "name": "git.agent.js",
+    "functions": [
+      "gitAgent(state): Generates code for each subtask, returns mapping of subtask to code."
+    ]
+  },
+  {
+    "path": "src/graph/pipeline.js",
+    "name": "pipeline.js",
+    "functions": [
+      "buildStoryFlow(): Defines workflow graph, registers agent nodes, sets up state channels and edges.",
+      "runPipeline(input): Runs the pipeline, writes logs to file."
+    ]
+  },
+  {
+    "path": "src/graph/schema.js",
+    "name": "schema.js",
+    "functions": [
+      "StoryStateSchema: Zod schema for validating pipeline state.",
+      "defaultState(partial): Initializes state with logs."
+    ]
+  },
+  {
+    "path": "src/llm/models.js",
+    "name": "models.js",
+    "functions": [
+      "smallModel: LLM for enrichment, decomposition, estimation, testing.",
+      "reasoningModel: LLM for advanced reasoning.",
+      "codeModel: LLM for code generation."
+    ]
+  },
+  {
+    "path": "src/context/context.manager.js",
+    "name": "context.manager.js",
+    "functions": [
+      "getContext(agentName, state): Loads context documents, metadata, and acceptance criteria from ChromaDB."
+    ]
+  },
+  {
+    "path": "src/db/chromadb.js",
+    "name": "chromadb.js",
+    "functions": [
+      "Minimal ChromaDB client, getEmbeddings(texts), chromaClient.query/upsert for document search and storage."
+    ]
+  },
+  {
+    "path": "src/db/postgressdb.js",
+    "name": "postgressdb.js",
+    "functions": [
+      "Postgres connection pool, queryDB(query, params): Helper for DB queries."
+    ]
+  },
+  {
+    "path": "src/train/train.js",
+    "name": "train.js",
+    "functions": [
+      "trainModel(modelName, datasetPath): Fine-tunes OpenAI models with datasets.",
+      "main(): Trains Estimation, Decomposition, Testing models."
+    ]
+  },
+  {
+    "path": "src/train/decomposition_training_data.jsonl",
+    "name": "decomposition_training_data.jsonl",
+    "functions": [
+      "Training data for decomposition agent."
+    ]
+  },
+  {
+    "path": "src/train/estimation_training_data.jsonl",
+    "name": "estimation_training_data.jsonl",
+    "functions": [
+      "Training data for estimation agent."
+    ]
+  },
+  {
+    "path": "src/train/testing_training_data.jsonl",
+    "name": "testing_training_data.jsonl",
+    "functions": [
+      "Training data for testing agent."
+    ]
+  },
+  {
+    "path": "src/web/story.routes.js",
+    "name": "story.routes.js",
+    "functions": [
+      "Express router for /api/story/run, runs pipeline and returns output."
+    ]
+  },
+  {
+    "path": "public/story_input.html",
+    "name": "story_input.html",
+    "functions": [
+      "Web UI for story input."
+    ]
+  },
+  {
+    "path": "src/logger.js",
+    "name": "logger.js",
+    "functions": [
+      "Centralized pino logger, writes logs to sprint-pilot.log."
+    ]
+  },
+  {
+    "path": "src/server.js",
+    "name": "server.js",
+    "functions": [
+      "Express server setup, logging, API routing, serves public HTML."
+    ]
+  },
+  {
+    "path": "package.json",
+    "name": "package.json",
+    "functions": [
+      "Project manifest, dependencies, scripts, entry points."
+    ]
+  }
+]

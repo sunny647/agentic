@@ -1,0 +1,186 @@
+{
+	"project": "SprintPilot",
+	"description": "SprintPilot is a modular, multi-agent pipeline for automated story decomposition, estimation, code generation, and testing, orchestrated via LangGraph and powered by LLMs.",
+	"tech_stack": {
+		"frontend": "React, HTML, jQuery, javascript, css",
+		"backend": "Node.js, Express, ChromaDB, Postgres",
+		"llm": "OpenAI",
+        "framework": "LangChain, LangGraph"
+	},
+    "dependencies": {
+        "@chroma-core/default-embed": "^0.1.8",
+        "@langchain/core": "^0.3.72",
+        "@langchain/langgraph": "^0.4.6",
+        "@langchain/langgraph-supervisor": "^0.0.18",
+        "@langchain/openai": "^0.6.9",
+        "chromadb": "^3.0.14",
+        "dotenv": "^17.2.1",
+        "express": "^5.1.0",
+        "openai": "^5.15.0",
+        "pg": "^8.16.3",
+        "pino": "^9.9.0",
+        "pino-http": "^10.5.0",
+        "uuid": "^11.1.0",
+        "zod": "^4.1.1"
+    },
+    "core_modules": {
+		"graph": {
+			"pipeline.js": {
+				"purpose": "Defines the workflow graph using LangGraph. Orchestrates agent nodes and state propagation.",
+				"channels": [
+					"story",
+					"enrichedStory",
+					"decomposition",
+					"codingTasks",
+					"estimation",
+					"code",
+					"tests",
+					"git",
+					"supervisorDecision",
+					"feedback",
+					"logs"
+				],
+				"flow": [
+					"enrichmentAgent",
+					"decompositionAgent",
+					"estimationAgent",
+					"codingAgent",
+					"testingAgent",
+					"supervisorAgent"
+				],
+				"conditional_edges": "Supervisor can route back to any agent for revision."
+			},
+			"schema.js": {
+				"purpose": "Validates pipeline state using Zod schemas. Ensures all agent outputs conform to expected structure.",
+				"main_schema": "StoryStateSchema",
+				"key_fields": [
+					"story",
+					"enrichedStory",
+					"context",
+					"decomposition",
+					"codingTasks",
+					"estimation",
+					"code",
+					"tests"
+				]
+			}
+		},
+		"agents": {
+			"enrichment.agent.js": {
+				"role": "Business Analyst",
+				"function": "Enriches the user story, expands acceptance criteria, clarifies scope and dependencies.",
+				"input": "Raw story text",
+				"output": "enrichedStory, acceptanceCriteria"
+			},
+			"decomposition.agent.js": {
+				"role": "Tech Lead",
+				"function": "Decomposes enriched story into FE/BE/shared tasks and risks. Maps codingTasks for downstream agents.",
+				"input": "enrichedStory, acceptanceCriteria, contextDocs",
+				"output": "decomposition, codingTasks"
+			},
+			"estimation.agent.js": {
+				"role": "Engineering Manager",
+				"function": "Estimates story points and confidence for each codingTask and overall story.",
+				"input": "enrichedStory, codingTasks, acceptanceCriteria",
+				"output": "estimation"
+			},
+			"coding.agent.js": {
+				"role": "Full-stack Engineer",
+				"function": "Generates production-quality code diffs for codingTasks using LLM.",
+				"input": "enrichedStory, codingTasks, decomposition",
+				"output": "code (file map)"
+			},
+			"testing.agent.js": {
+				"role": "QA Engineer",
+				"function": "Generates test scenarios and Gherkin cases for the code and story.",
+				"input": "code, enrichedStory, acceptanceCriteria",
+				"output": "tests"
+			},
+			"supervisor.agent.js": {
+				"role": "Supervisor/Reviewer",
+				"function": "Validates outputs, provides feedback, and can route workflow back for revision.",
+				"input": "All agent outputs",
+				"output": "supervisorDecision, feedback"
+			}
+		}
+	},
+	"llm_integration": {
+		"models": {
+			"smallModel": "Used for enrichment, decomposition, estimation, and testing agents.",
+			"codeModel": "Used for code generation in coding agent."
+		},
+		"prompt_engineering": "Each agent uses a system/user prompt pair tailored to its role and output format."
+	},
+	"web": {
+		"purpose": "Frontend and API server logic. Hosts web UI and API endpoints for pipeline interaction.",
+		"main_files": [
+			"server.js",
+			"web/"
+		],
+		"features": [
+			"Express server",
+			"API routes",
+			"serves public assets"
+		]
+	},
+	"public": {
+		"purpose": "Static assets for web frontend (HTML, CSS, JS, images).",
+		"main_files": [
+			"public/"
+		],
+		"features": [
+			"story_input.html",
+			"client-side scripts",
+			"stylesheets"
+		]
+	},
+	"train": {
+		"purpose": "Training and fine-tuning utilities for LLMs and agent models.",
+		"main_files": [
+			"train/"
+		],
+		"features": [
+			"training scripts",
+			"data preparation",
+			"model evaluation"
+		]
+	},
+	"context": {
+		"purpose": "Context management for agent pipeline. Loads and manages architecture docs, code references, and acceptance criteria.",
+		"main_files": [
+			"context/"
+		],
+		"features": [
+			"context.manager.js",
+			"document loaders",
+			"context enrichment"
+		]
+	},
+	"db": {
+		"purpose": "Database integration and persistence for pipeline state, logs, and artifacts.",
+		"main_files": [
+			"db/"
+		],
+		"features": [
+			"database adapters",
+			"state storage",
+			"artifact management"
+		]
+	},
+	"logging": {
+		"library": "pino",
+		"centralized": true,
+		"log_channels": "All agent actions and state transitions are logged. Logs are written to file."
+	},
+	"state_management": {
+		"pattern": "State object is passed and mutated between agents. Each agent merges its output into the state.",
+		"validation": "Zod schema ensures state integrity at each step."
+	},
+	"error_handling": {
+		"pattern": "Agents catch and log errors. Supervisor agent can request revision if outputs are missing or invalid."
+	},
+	"extensibility": {
+		"add_agent": "Register new agent node in pipeline.js and add corresponding channel in schema.js.",
+		"custom_flow": "Modify workflow edges and conditional logic for custom orchestration."
+	}
+}
