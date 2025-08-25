@@ -28,7 +28,7 @@ export async function codingAgent(state) {
   - includes comments where non-trivial
   `;
 
-  const user = `Story: ${state.story}\n\nTasks:\n- ${tasks.join('\n- ')}`;
+  const user = `Story: ${state.enrichedStory || state.story}\n\nTasks:\n- ${tasks.join('\n- ')}`;
 
   const resp = await codeModel.invoke([
     { role: 'system', content: system },
@@ -61,10 +61,11 @@ export async function codingAgent(state) {
   }
 
     // Map code for supervisor
+    const generatedCode = files;
     logger.info({ generatedCode }, 'codingAgent mapped code');
-  return {
-    ...state,
+    return {
+      ...state,
       code: generatedCode,
-    logs: [...(state.logs || []), 'coding:done'],
-  };
+      logs: [...(state.logs || []), 'coding:done'],
+    };
 }

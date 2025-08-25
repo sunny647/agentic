@@ -16,6 +16,7 @@ export function buildStoryFlow() {
       story: null,
       enrichedStory: null,
       decomposition: null,
+      codingTasks: null, // <-- ensure codingTasks are part of state
       estimation: null,
       code: null,
       tests: null,
@@ -28,7 +29,15 @@ export function buildStoryFlow() {
 
   // Register agents
   workflow.addNode("enrichment", enrichmentAgent);
-  workflow.addNode("decompose", decompositionAgent);
+  // Wrap decompositionAgent to merge codingTasks into state
+  workflow.addNode("decompose", async (state) => {
+    const result = await decompositionAgent(state);
+    return {
+      ...state,
+      decomposition: result.decomposition,
+      codingTasks: result.codingTasks,
+    };
+  });
   workflow.addNode("estimate", estimationAgent);
   workflow.addNode("coding", codingAgent);
   workflow.addNode("testing", testingAgent);
