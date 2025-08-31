@@ -17,7 +17,7 @@ export async function estimationAgent(state) {
     {
       role: 'system',
       content:
-        'You are a senior engineering manager. Provide an effort estimate with story points (0.5–13) and a confidence score (0–1). Be concise. Consider complexity, unknowns, dependencies. Output in JSON: {"storyPoints": number, "confidence": number, "notes": "short reasoning"} for each coding task and overall story.',
+        'You are a senior engineering manager. For each coding task, provide an effort estimate with story points (0.5–13) and a confidence score (0–1). Be concise. Consider complexity, unknowns, dependencies. Output in JSON: {"summedStoryPoints": number, "storyPointsbyTask": [{"storyPoints": number, "confidence": number, "notes": "short reasoning"}]} where storyPointsbyTask is an array with one object per coding task and summedStoryPoints is the total story points for the story.',
     },
     {
       role: 'user',
@@ -31,16 +31,37 @@ export async function estimationAgent(state) {
   const text = resp.content?.toString?.() || resp.content;
   logger.info({ text }, 'estimationAgent LLM response');
 
-  let estimation;
+  let estimationRaw;
+  let storyPointsbyTask = [];
+  let summedStoryPoints = 0;
   try {
-    estimation = JSON.parse(text);
+    estimationRaw = JSON.parse(text);
+    // If the output is an array, treat as per-task estimates
+    if (Array.isArray(estimationRaw)) {
+      storyPointsbyTask = estimationRaw;
+      summedStoryPoints = estimationRaw.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+    } else if (Array.isArray(estimationRaw.tasks)) {
+      storyPointsbyTask = estimationRaw.tasks;
+      summedStoryPoints = estimationRaw.tasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+    } else {
+      // fallback: single estimate
+      storyPointsbyTask = [estimationRaw];
+      summedStoryPoints = estimationRaw.storyPoints || 0;
+    }
   } catch {
-    estimation = {
+    // fallback: single estimate
+    storyPointsbyTask = [{
       storyPoints: 3,
       confidence: 0.6,
       notes: text || 'Default fallback estimation',
-    };
+    }];
+    summedStoryPoints = 3;
   }
+
+  const estimation = {
+    summedStoryPoints,
+    storyPointsbyTask
+  };
 
   const logs = Array.isArray(state.logs) ? state.logs : [];
   // Map estimation for supervisor

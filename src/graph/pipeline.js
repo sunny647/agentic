@@ -70,7 +70,7 @@ export function buildStoryFlow() {
     return []; // all good, end workflow
   });
 
-  workflow.addEdge("START", "enrichment");
+  workflow.addEdge("__start__", "enrichment");
 
   return workflow.compile();
 }
