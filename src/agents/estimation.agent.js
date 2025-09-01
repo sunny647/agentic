@@ -17,7 +17,8 @@ export async function estimationAgent(state) {
     {
       role: 'system',
       content:
-        'You are a senior engineering manager. For each coding task, provide an effort estimate with story points (0.5–13) and a confidence score (0–1). Be concise. Consider complexity, unknowns, dependencies. Output in JSON: {"summedStoryPoints": number, "storyPointsbyTask": [{"storyPoints": number, "confidence": number, "notes": "short reasoning"}]} where storyPointsbyTask is an array with one object per coding task and summedStoryPoints is the total story points for the story.',
+        'You are a senior engineering manager. For each coding task, provide an effort estimate with story points (0.5–13) and a confidence score (0–1). Be concise. Consider complexity, unknowns, dependencies. Output in JSON: {"summedStoryPoints": number, "storyPointsbyTask": [{"storyPoints": number, "confidence": number, "notes": "short reasoning"}]} where storyPointsbyTask is an array with one object per coding task and summedStoryPoints is the total story points for the story.' +
+        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`
     },
     {
       role: 'user',

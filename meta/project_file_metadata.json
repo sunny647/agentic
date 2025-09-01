@@ -24,7 +24,7 @@
     "path": "src/agents/estimation.agent.js",
     "name": "estimation.agent.js",
     "functions": [
-      "estimationAgent(state): Estimates story points and confidence for codingTasks."
+      "estimationAgent(state): Estimates story points and confidence for each codingTask and overall story. Outputs both per-task and summed story points as { summedStoryPoints, storyPointsbyTask }."
     ]
   },
   {
@@ -45,14 +45,14 @@
     "path": "src/agents/git.agent.js",
     "name": "git.agent.js",
     "functions": [
-      "gitAgent(state): Generates code for each subtask, returns mapping of subtask to code."
+      "gitAgent(state): Generates code diffs or file contents for each subtask from decomposition. Returns a mapping of subtask to generated code as { files, notes }."
     ]
   },
   {
     "path": "src/graph/pipeline.js",
     "name": "pipeline.js",
     "functions": [
-      "buildStoryFlow(): Defines workflow graph, registers agent nodes, sets up state channels and edges.",
+      "buildStoryFlow(): Defines workflow graph, registers agent nodes, sets up state channels and edges. Pipeline flow now includes gitAgent after testingAgent.",
       "runPipeline(input): Runs the pipeline, writes logs to file."
     ]
   },

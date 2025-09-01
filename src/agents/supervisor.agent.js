@@ -37,6 +37,9 @@ Your role is to REVIEW outputs from sub-agents and validate them.
 
 IMPORTANT: Return your response as a JSON object.
 
+Project context: ${JSON.stringify(state.contextJson)}
+Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
+
 Story context:
 ${JSON.stringify(state.story, null, 2)}
 

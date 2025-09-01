@@ -12,7 +12,8 @@ export async function testingAgent(state) {
       role: 'system',
       content:
         'You are a QA lead. Generate detailed test scenarios and Gherkin test cases. ' +
-        'Cover all identified risks and acceptance criteria. Format clearly with "Scenario:" and steps.'
+        'Cover all identified risks and acceptance criteria. Format clearly with "Scenario:" and steps.' +
+        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`
     },
     {
       role: 'user',

@@ -27,7 +27,7 @@ export async function gitAgent(state) {
     };
   }
 
-  const system = `You are a senior engineer. For each subtask, generate production-quality code. Return a JSON object mapping subtask to code.`;
+  const system = `You are a senior engineer. For each subtask, generate production-quality code. Return a JSON object mapping subtask to code.\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`;
 
   const user = `Subtasks:\n- ${allTasks.join('\n- ')}`;
 

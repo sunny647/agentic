@@ -78,12 +78,21 @@ export function buildStoryFlow() {
 
 export async function runPipeline(input) {
   const app = buildStoryFlow();
-  const init = defaultState(input);
+  // Load context.json and project_file_metadata.json synchronously
+  const fs = await import('fs');
+  const contextJson = JSON.parse(fs.readFileSync('meta/context.json', 'utf8'));
+  const projectFileMetadataJson = JSON.parse(fs.readFileSync('meta/project_file_metadata.json', 'utf8'));
+
+  // Inject into initial state
+  const init = defaultState({
+    ...input,
+    contextJson,
+    projectFileMetadataJson
+  });
+
   const result = await app.invoke(init);
   // Write logs to a file
-  import('fs').then(fs => {
-    const logData = Array.isArray(result.logs) ? result.logs.join('\n') : String(result.logs);
-    fs.writeFileSync('pipeline-logs.txt', logData, 'utf8');
-  });
+  const logData = Array.isArray(result.logs) ? result.logs.join('\n') : String(result.logs);
+  fs.writeFileSync('pipeline-logs.txt', logData, 'utf8');
   return result;
 }

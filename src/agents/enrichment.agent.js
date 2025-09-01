@@ -14,7 +14,8 @@ export async function enrichmentAgent(state) {
       content:
         'You are a business analyst. Enrich the user story by clarifying scope, assumptions, and dependencies. ' +
         'Also expand the acceptance criteria into a detailed list that covers edge cases and risks. ' +
-        'Output JSON with { "description": "...", "acceptanceCriteria": ["...","..."] }'
+        'Output JSON with { "description": "...", "acceptanceCriteria": ["...","..."] }' +
+        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`
     },
     {
       role: 'user',

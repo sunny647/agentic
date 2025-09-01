@@ -46,6 +46,7 @@
 					"estimationAgent",
 					"codingAgent",
 					"testingAgent",
+					"gitAgent",
 					"supervisorAgent"
 				],
 				"conditional_edges": "Supervisor can route back to any agent for revision."
@@ -80,9 +81,9 @@
 			},
 			"estimation.agent.js": {
 				"role": "Engineering Manager",
-				"function": "Estimates story points and confidence for each codingTask and overall story.",
+				"function": "Estimates story points and confidence for each codingTask and overall story. Outputs both per-task and summed story points.",
 				"input": "enrichedStory, codingTasks, acceptanceCriteria",
-				"output": "estimation"
+				"output": "estimation: { summedStoryPoints, storyPointsbyTask }"
 			},
 			"coding.agent.js": {
 				"role": "Full-stack Engineer",
@@ -95,6 +96,12 @@
 				"function": "Generates test scenarios and Gherkin cases for the code and story.",
 				"input": "code, enrichedStory, acceptanceCriteria",
 				"output": "tests"
+			},
+			"git.agent.js": {
+				"role": "DevOps Engineer",
+				"function": "Generates code diffs or file contents for each subtask from decomposition. Returns a mapping of subtask to generated code.",
+				"input": "decomposition (feTasks, beTasks, sharedTasks)",
+				"output": "git: { files, notes }"
 			},
 			"supervisor.agent.js": {
 				"role": "Supervisor/Reviewer",

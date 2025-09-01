@@ -26,6 +26,7 @@ export async function codingAgent(state) {
   - matches the described tasks
   - self-contained for copy-paste usage
   - includes comments where non-trivial
+  \n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
   `;
 
   const user = `Story: ${state.enrichedStory || state.story}\n\nTasks:\n- ${tasks.join('\n- ')}`;
