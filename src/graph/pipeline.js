@@ -9,11 +9,14 @@ import { codingAgent } from "../agents/coding.agent.js";
 import { testingAgent } from "../agents/testing.agent.js";
 import { supervisorAgent } from "../agents/supervisor.agent.js";
 import { defaultState } from "./schema.js";
+import logger from '../logger.js';
+
 
 export function buildStoryFlow() {
   const workflow = new StateGraph({
     channels: {
       story: null,
+      issueID: null,
       enrichedStory: null,
       decomposition: null,
       codingTasks: null, // <-- ensure codingTasks are part of state
@@ -89,6 +92,13 @@ export async function runPipeline(input) {
     contextJson,
     projectFileMetadataJson
   });
+
+  // Debug log for initial state
+  try {
+    logger.info({ init }, 'DEBUG: Initial pipeline state (including issueID)');
+  } catch (e) {
+    // If logger import fails, ignore
+  }
 
   const result = await app.invoke(init);
   // Write logs to a file

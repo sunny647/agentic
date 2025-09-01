@@ -37,7 +37,7 @@ router.post('/run', async (req, res) => {
     if (!storyText) return res.status(400).json({ error: 'story or jiraKey required' });
 
   logger.info({ storyText }, 'Starting pipeline with story');
-  const output = await runPipeline({ requestId, story: storyText });
+  const output = await runPipeline({ requestId, story: storyText, issueID: extractedJiraKey });
 
     res.json({ requestId, output });
   } catch (err) {

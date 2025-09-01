@@ -2,14 +2,13 @@
 import logger from '../logger.js';
 import JiraClient from 'jira-client';
 
+
 const jira = new JiraClient({
-// Log Jira connection info after client is initialized
-// Log Jira connection info after client is initialized
   protocol: 'https',
   host: process.env.JIRA_HOST, // e.g. 'your-domain.atlassian.net'
   username: process.env.JIRA_EMAIL,
   password: process.env.JIRA_API_TOKEN,
-  apiVersion: '2',
+  apiVersion: '3',
   strictSSL: true
 });
 
@@ -40,25 +39,46 @@ export const jiraTools = {
       const results = [];
       let parent, projectKey;
       try {
-        parent = await jira.findIssue(parentIssueId);
-        logger.info({ parent }, 'Fetched parent issue for createSubTasks');
-        projectKey = parent.fields.project.key;
+      parent = await jira.findIssue(parentIssueId);
+      logger.info({ parent }, 'Fetched parent issue for createSubTasks');
+      projectKey = parent.fields.project.key;
       } catch (err) {
-        logger.error({ parentIssueId, error: err.message }, 'Failed to fetch parent issue in createSubTasks');
-        return { error: 'Failed to fetch parent issue: ' + err.message };
+      // Log full error details for debugging
+      logger.error({
+        parentIssueId,
+        errorMessage: err && err.message ? err.message : null,
+        errorStack: err && err.stack ? err.stack : null,
+        errorResponse: err && err.response ? err.response : null,
+        errorRaw: err
+      }, 'Failed to fetch parent issue in createSubTasks');
+      return { error: `Failed to fetch parent issue: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}` };
       }
       for (const { summary, description } of tasks) {
         logger.info({ summary, description }, 'Creating Jira sub-task');
         try {
-          const subTask = await jira.addNewIssue({
-            fields: {
-              project: { key: projectKey },
-              parent: { key: parentIssueId },
-              summary,
-              description,
-              issuetype: { name: 'Sub-task' }
-            }
-          });
+              // Convert description to Atlassian Document Format (ADF)
+              const adfDescription = {
+                type: 'doc',
+                version: 1,
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [
+                      { type: 'text', text: description || '' }
+                    ]
+                  }
+                ]
+              };
+              // Fetch all issue types for the project to get the sub-task type ID
+              const subTask = await jira.addNewIssue({
+                fields: {
+                  project: { key: projectKey },
+                  parent: { key: parentIssueId },
+                  summary,
+                  description: adfDescription,
+                  issuetype: { id: '10002' }
+                }
+              });
           logger.info({ summary, key: subTask.key }, 'Sub-task created');
           results.push({ summary, key: subTask.key });
         } catch (err) {
@@ -96,11 +116,21 @@ export const jiraTools = {
       try {
         const subTask = await jira.addNewIssue({
           fields: {
-            project: { key: projectKey },
-            parent: { key: parentIssueId },
-            summary,
-            description,
-            issuetype: { name: 'Sub-task' }
+              // Fetch all issue types for the project to get the sub-task type ID
+              project: { key: projectKey },
+              parent: { key: parentIssueId },
+              summary,
+              description,
+              issuetype: (() => {
+                // This is a synchronous block for single sub-task creation
+                // Ideally, cache this if called repeatedly
+                return jira.getProject(projectKey)
+                  .then(projectMeta => {
+                    const subTaskType = (projectMeta.issueTypes || []).find(type => type.subtask || type.name.toLowerCase().includes('sub-task'));
+                    if (!subTaskType) throw new Error('Sub-task issue type not found for project: ' + projectKey);
+                    return { id: subTaskType.id };
+                  });
+              })()
           }
         });
         logger.info({ summary, key: subTask.key }, 'Sub-task created');

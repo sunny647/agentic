@@ -2,8 +2,9 @@
 // File: src/agents/decomposition.agent.js
 // ─────────────────────────────────────────────────────────────────────────────
 import { smallModel } from '../llm/models.js';
-import logger from '../logger.js';
 import { getContext } from '../context/context.manager.js';
+import { jiraTools } from '../services/jiraTools.js';
+import logger from '../logger.js';
 
 export async function decompositionAgent(state) {
   logger.info({ enrichedStory: state.enrichedStory }, 'decompositionAgent called');
@@ -24,7 +25,8 @@ export async function decompositionAgent(state) {
           "sharedTasks": ["<Shared task 1>", ...],
           "risks": ["<Risk 1>", ...]
         }
-        Do not include any markdown, explanation, or extra text. Only valid JSON. Use the following context (architecture docs, code references, acceptance criteria) to ensure correctness and alignment.`,
+        Do not include any markdown, explanation, or extra text. Only valid JSON. Use the following context (architecture docs, code references, acceptance criteria) to ensure correctness and alignment.` +
+        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`,
     },
     {
       role: 'user', content: JSON.stringify({
@@ -66,6 +68,23 @@ export async function decompositionAgent(state) {
     ...sharedTasks.map((task) => ({ type: 'Shared', task })),
   ];
   logger.info({ codingTasks }, 'decompositionAgent mapped codingTasks');
+
+  // After codingTasks are mapped, call JiraTools.createSubTasks to create Jira sub-tasks
+  if (codingTasks.length > 0) {
+    logger.info({ stateIssueID: state.issueID }, 'DEBUG: state.issueID before parentIssueId assignment');
+    const parentIssueId = state.issueID || '';
+    logger.info({ parentIssueId }, 'DEBUG: parentIssueId before Jira sub-task creation');
+    const tasks = codingTasks.map(task => ({
+      summary: task.task,
+      description: `Auto-generated sub-task for: ${task.task}`
+    }));
+    try {
+      const jiraResult = await jiraTools.createSubTasks.execute({ parentIssueId, tasks });
+      logger.info({ parentIssueId, tasks, jiraResult }, 'Jira sub-tasks created after codingTasks mapping');
+    } catch (err) {
+      logger.error({ parentIssueId, tasks, error: err.message }, 'Failed to create Jira sub-tasks after codingTasks mapping');
+    }
+  }
 
   return {
     ...state,

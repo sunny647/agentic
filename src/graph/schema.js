@@ -3,6 +3,7 @@ import { en } from 'zod/v4/locales';
 
 export const StoryStateSchema = z.object({
   requestId: z.string(),
+  issueID: z.string().optional(),
   story: z.string(),
   enrichedStory: z.string().optional(),
   context: z
@@ -36,4 +37,8 @@ export const StoryStateSchema = z.object({
     .optional(),
 });
 
-export const defaultState = (partial) => ({ logs: [], ...partial });
+export const defaultState = (partial) => ({
+  logs: [],
+  issueID: partial.issueID || '',
+  ...partial
+});
