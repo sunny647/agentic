@@ -24,6 +24,8 @@ export function buildStoryFlow() {
       code: null,
       tests: null,
       git: null,
+      contextJson: null,
+      projectFileMetadataJson: null,
       supervisorDecision: null,
       feedback: {},   // 🔹 new channel for feedback
       logs: [],

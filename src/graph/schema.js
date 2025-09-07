@@ -35,6 +35,8 @@ export const StoryStateSchema = z.object({
   tests: z
     .object({ scenarios: z.array(z.string()).default([]), cases: z.array(z.string()).default([]) })
     .optional(),
+  contextJson: z.any().optional(),
+  projectFileMetadataJson: z.any().optional(),
 });
 
 export const defaultState = (partial) => ({
