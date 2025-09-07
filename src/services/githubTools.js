@@ -1,9 +1,25 @@
 // githubTools.js
 import { Octokit } from "@octokit/rest";
 import { applyPatch } from "diff";
-
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
+export const getFileTool = {
+  name: "getFile",
+  description: "Get the latest content of a file from the repo.",
+  args: {
+    path: { type: "string", description: "Path to the file" },
+    owner: { type: "string", description: "Repo owner" },
+    repo: { type: "string", description: "Repo name" },
+    ref: { type: "string", description: "Branch or ref", optional: true }
+  },
+  call: async function({ path, owner, repo, ref = "main" }) {
+    const { data } = await octokit.repos.getContent({ owner, repo, path, ref });
+    if ("content" in data) {
+      return Buffer.from(data.content, "base64").toString("utf-8");
+    }
+    throw new Error("File not found or is a directory.");
+  }
+};
 /**
  * Get file content from a branch
  */

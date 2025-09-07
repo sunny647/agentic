@@ -1,25 +1,27 @@
 // codingAgent.js
-import { codeModel } from '../llm/models.js';
+import { getCodeAgent } from '../llm/models.js';
 import logger from '../logger.js';
-import { Octokit } from "@octokit/rest";
-import { applyPatch } from 'diff'; // from 'diff' npm package 
 import dotenv from 'dotenv';
+// --- Tool functions ---
+const { createBranch, commitFiles: githubCommitFiles, createPR } =
+    (await import('../services/githubTools.js')).githubTools;
+
 dotenv.config();
 
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-
 export async function codingAgent(state) {
+  const codeAgent = await getCodeAgent();
   logger.info({ state }, 'codingAgent called');
-  // inside codingAgent before calling Octokit APIs
-const storyKey = state.storyKey || `task-${Date.now()}`;
-const branchName = `feature/${storyKey}-${Math.random().toString(36).substr(2,5)}`;
-state.branchName = branchName; // add branchName to state for later use
 
-state.baseBranch = state.baseBranch || process.env.GIT_DEFAULT_BRANCH || 'main';
-state.repoOwner = state.repoOwner || process.env.GITHUB_REPO_OWNER;
-state.repoName = state.repoName || process.env.GITHUB_REPO_NAME;
+  // --- Setup repo/branch info ---
+  const storyKey = state.storyKey || `task-${Date.now()}`;
+  const branchName = `feature/${storyKey}-${Math.random().toString(36).substr(2, 5)}`;
+  state.branchName = branchName;
 
-const tasks = [
+  state.baseBranch = state.baseBranch || process.env.GIT_DEFAULT_BRANCH || 'main';
+  state.repoOwner = state.repoOwner || process.env.GITHUB_REPO_OWNER;
+  state.repoName = state.repoName || process.env.GITHUB_REPO_NAME;
+
+  const tasks = [
     ...(state.decomposition?.feTasks || []),
     ...(state.decomposition?.beTasks || []),
     ...(state.decomposition?.sharedTasks || []),
@@ -33,19 +35,25 @@ const tasks = [
     };
   }
 
+  // --- Prompt setup ---
   const system = `You are a senior full-stack engineer.
-You will be given a Jira story, the repo structure, and relevant file contents.
+You will be given a Jira story and must propose code changes.
 
-Your output must be a JSON object where keys are file paths,
-and values are objects with:
-- "action": "create" | "modify" | "delete"
-- "patch": unified diff for modify, full file content for create
+You have access to a tool:
+- getFile(path): returns the latest content of a file from the repo.
 
 Rules:
-- Always generate syntactically valid patches.
-- Prefer minimal changes rather than rewriting whole files.
-- Do not include explanations, only JSON.
-- If unsure about exact placement, include a clear comment in the patch.
+- For modifying an existing file, ALWAYS call getFile(path) first.
+- When responding with changes, return the FULL file content, not diffs.
+- Respond strictly in JSON:
+  {
+    "files": {
+      "src/example.js": { "action": "modify", "content": "..." },
+      "src/newFile.js": { "action": "create", "content": "..." },
+      "src/oldFile.js": { "action": "delete" }
+    }
+  }
+- Do not add explanations outside JSON.
 
 Project context: ${JSON.stringify(state.contextJson)}
 Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
@@ -55,108 +63,64 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
 
   const user = `Story: ${state.enrichedStory || state.story}\n\nTasks:\n- ${tasks.join('\n- ')}`;
 
-  const resp = await codeModel.invoke([
-    { role: 'system', content: system },
-    { role: 'user', content: user },
-  ]);
+  // Build prompt string for agent input
+  const prompt = `${system}\n\n${user}`;
 
-  const text = resp.content?.toString?.() || resp.content;
-  logger.info({ text }, 'codingAgent LLM response');
+  // Use agent executor for tool calling
+  const resp = await codeAgent.invoke({ input: prompt });
+  let finalResponse = resp;
 
+  // --- Parse final JSON ---
   let files = {};
   let validationNotes = [];
-
   try {
-    files = JSON.parse(text);
+    files = JSON.parse(finalResponse.content);
   } catch (err) {
-    validationNotes.push(`Could not parse as JSON. Capturing raw output.`);
-    files = { 'IMPLEMENTATION_NOTES.md': { action: "create", patch: String(text) } };
+    validationNotes.push('Could not parse as JSON, capturing raw output');
+    files = { 'IMPLEMENTATION_NOTES.md': { action: 'create', content: String(finalResponse.content) } };
   }
 
-  // === Convert patches into full file contents ===
   let commitFileList = [];
-  for (const [path, change] of Object.entries(files)) {
-    logger.info({ path, action: change.action }, `Processing file: ${path} with action: ${change.action}`);
-    try {
-      if (change.action === "create") {
-        logger.info({ path }, `Creating new file: ${path}`);
-        commitFileList.push({ path, content: change.patch });
-      } else if (change.action === "modify") {
-        logger.info({ path }, `Modifying file: ${path}`);
-        // Get current file from GitHub
-        const { data: fileData } = await octokit.repos.getContent({
-          owner: state.repoOwner,
-          repo: state.repoName,
-          path,
-          ref: state.baseBranch, // current branch
-        });
-
-        const currentContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
-        logger.info({ path }, `Fetched current content for: ${path}`);
-
-        // Apply patch
-        const updatedContent = applyPatch(currentContent, change.patch);
-        if (!updatedContent) {
-          validationNotes.push(`Patch failed to apply for ${path}`);
-          logger.warn({ path }, `Patch failed to apply for: ${path}`);
-          continue;
-        }
-
-        logger.info({ path }, `Patch applied successfully for: ${path}`);
-        commitFileList.push({ path, content: updatedContent });
-      } else if (change.action === "delete") {
-        logger.info({ path }, `Deleting file: ${path}`);
-        // Represent deletes with empty content OR handle separately
-        commitFileList.push({ path, content: "" });
-      } else {
-        validationNotes.push(`Invalid action for ${path}: ${change.action}`);
-        logger.warn({ path, action: change.action }, `Invalid action for: ${path}`);
-      }
-    } catch (err) {
-      validationNotes.push(`Error processing ${path}: ${err.message}`);
-      logger.error({ path, err }, `Error processing file: ${path}`);
+  for (const [path, change] of Object.entries(files.files || {})) {
+    logger.info({ path, action: change.action }, `Processing ${path}`);
+    if (change.action === 'delete') {
+      commitFileList.push({ path, delete: true });
+    } else {
+      commitFileList.push({ path, content: change.content });
     }
   }
 
-  logger.info({ commitFileList }, 'codingAgent prepared commit-ready files');
-
   // --- GitHub automation ---
-  // Import tools
-  const { createBranch, commitFiles: githubCommitFiles, createPR } = (await import('../services/githubTools.js')).githubTools;
-
   // 1. Create branch
-  logger.info({ branchName, baseBranch: state.baseBranch }, 'codingAgent: creating branch');
   try {
     await createBranch({
       owner: state.repoOwner,
       repo: state.repoName,
       newBranch: branchName,
-      baseBranch: state.baseBranch
+      baseBranch: state.baseBranch,
     });
-    logger.info({ branchName }, 'codingAgent: branch created');
+    logger.info({ branchName }, 'Branch created');
   } catch (err) {
     validationNotes.push(`Branch creation failed: ${err.message}`);
-    logger.error({ err }, 'codingAgent: branch creation failed');
+    logger.error({ err }, 'Branch creation failed');
   }
 
   // 2. Commit files
-  logger.info({ commitFileList, branchName }, 'codingAgent: committing files');
   try {
     await githubCommitFiles({
       owner: state.repoOwner,
       repo: state.repoName,
       branch: branchName,
       message: `Auto-generated code for ${state.storyKey || state.issueID || 'story'}`,
-      files: commitFileList.map(f => ({ path: f.path, action: 'create', content: f.content }))
+      files: commitFileList,
     });
-    logger.info({ branchName }, 'codingAgent: files committed');
+    logger.info({ branchName }, 'Files committed');
   } catch (err) {
     validationNotes.push(`Commit failed: ${err.message}`);
-    logger.error({ err }, 'codingAgent: commit failed');
+    logger.error({ err }, 'Commit failed');
   }
 
   // 3. Create PR
-  logger.info({ branchName, baseBranch: state.baseBranch }, 'codingAgent: creating PR');
   let prUrl = null;
   try {
     const pr = await createPR({
@@ -165,20 +129,20 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
       title: `Auto PR for ${state.storyKey || state.issueID || 'story'}`,
       body: state.enrichedStory || state.story || '',
       head: branchName,
-      base: state.baseBranch
+      base: state.baseBranch,
     });
     prUrl = pr.url;
-    logger.info({ prUrl }, 'codingAgent: PR created');
+    logger.info({ prUrl }, 'PR created');
   } catch (err) {
     validationNotes.push(`PR creation failed: ${err.message}`);
-    logger.error({ err }, 'codingAgent: PR creation failed');
+    logger.error({ err }, 'PR creation failed');
   }
 
   return {
     ...state,
-    codePatches: files,    // raw LLM patches
-    commitFiles: commitFileList,           // full file contents for githubTools.commitFiles
-    prUrl,                 // PR URL if created
+    codePatches: files,
+    commitFiles: commitFileList,
+    prUrl,
     logs: [...(state.logs || []), 'coding:done'],
     validationNotes,
   };
