@@ -1,44 +1,43 @@
-# Agentic Supervisor: Jira Story → Estimation → Tasks → Code → Tests → PR
+# SprintPilot
 
-This is a modular Node.js + Express API using LangChain + LangGraph and the OpenAI SDK to orchestrate a multi-agent flow.
+SprintPilot is a modular, multi-agent pipeline for automated story decomposition, estimation, code generation, and testing, orchestrated via LangGraph and powered by LLMs.
 
-## Quickstart
+## Features
+- Automated story enrichment, decomposition, estimation, code & test generation
+- Modular agent pipeline (LangGraph)
+- Centralized logging
+- Web UI for story input
+- **User authentication with email/password and Google Sign-In**
 
-1. **Clone & install**
-```bash
-npm install
-cp .env.example .env
-# fill OPENAI_API_KEY and (optionally) GitHub/Jira vars
-```
+## Authentication Flow
 
-2. **Run**
-```bash
-npm run dev
-curl -X POST https://agentic-i1ng.onrender.com/api/story/run \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "story": "As a user, I can log in with SSO and see my dashboard.",
-    "context": {
-      "repo": { "owner": "acme", "name": "shop" },
-      "techStack": ["Node", "React"],
-      "acceptanceCriteria": [
-        "Login via OAuth2",
-        "Session persisted",
-        "Show personalized dashboard"
-      ]
-    }
-  }'
-```
+SprintPilot supports secure login via email/password and Google OAuth:
 
-3. **What it does**
-- Supervisor orchestrates a linear flow
-- Estimation → Decomposition → Coding → Testing → Git PR
-- If GitHub vars are missing, it will throw on PR step — comment out `git` node to test earlier steps only.
+1. **Login Form**: Users can log in using their email/password or Google account from `/login`.
+2. **Email/Password**: Credentials are validated server-side. Passwords are hashed with bcrypt. JWT session cookie is set on success.
+3. **Google Sign-In**: Redirects to Google OAuth. On success, user is upserted in the database and JWT session cookie is set.
+4. **Session Management**: JWT is stored in an HTTP-only cookie. `/api/auth/me` returns current user info if authenticated.
+5. **Logout**: `/api/auth/logout` clears the session cookie.
 
-## Notes
-- Prompts are intentionally minimal; refine for your domains.
-- For production, replace naive parsers with **structured output** (JSON schemas) and add **guardrails**.
-- Extend with RAG by injecting architecture context before `codingAgent`.
-- https://sharathmech.atlassian.net
-- https://agentic-i1ng.onrender.com
-- https://github.com/sunny647/agentic
+### API Endpoints
+- `POST /api/auth/login` — Login with email/password
+- `GET /api/auth/google` — Start Google OAuth
+- `GET /api/auth/google/callback` — Google OAuth callback
+- `GET /api/auth/logout` — Logout
+- `GET /api/auth/me` — Get current user info
+
+### Database
+- Users are stored in the `users` table (see `src/db/migrations/001_create_users.sql`).
+
+## Setup
+1. Create a Postgres database and run the migration in `src/db/migrations/001_create_users.sql`.
+2. Set environment variables:
+   - `DATABASE_URL` (Postgres connection string)
+   - `JWT_SECRET` (for JWT signing)
+   - `GOOGLE_CLIENT_ID` and `GOOGLE_REDIRECT_URI` (for Google OAuth)
+3. Build frontend assets for login (`login.bundle.js`).
+4. Start the server and visit `/login` to authenticate.
+
+---
+
+For more details, see code in `src/web/auth.routes.js` and `src/web/components/LoginForm.js`.

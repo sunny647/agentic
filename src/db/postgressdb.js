@@ -1,17 +1,11 @@
-// db.js
-import pkg from "pg";
-const { Pool } = pkg;
-
-export const pool = new Pool({
-  user: "youruser",
-  host: "localhost",
-  database: "radar",
-  password: "yourpassword",
-  port: 5432,
+// postgressdb.js
+const { Pool } = require('pg');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Helper query function
-export async function queryDB(query, params = []) {
+async function queryDB(query, params) {
   const client = await pool.connect();
   try {
     const res = await client.query(query, params);
@@ -20,3 +14,5 @@ export async function queryDB(query, params = []) {
     client.release();
   }
 }
+
+module.exports = { queryDB, pool };
