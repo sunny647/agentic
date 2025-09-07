@@ -1,27 +1,45 @@
-import express from 'express';
-import pino from 'pino';
-import pinoHttp from 'pino-http';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import './setupEnv.js';
-import storyRouter from './web/story.routes.js';
+// server.js
+const express = require('express');
+const session = require('express-session');
+const passport = require('passport');
+const path = require('path');
+const pinoHttp = require('pino-http');
+const { logger } = require('./logger');
+const storyRoutes = require('./web/story.routes');
+const authRoutes = require('./web/auth.routes');
+require('./web/passport.config');
 
 const app = express();
-const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
-app.use(express.json({ limit: '1mb' }));
+
+app.use(express.json());
 app.use(pinoHttp({ logger }));
 
-// Serve story_input.html from public directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.get('/', (_req, res) => {
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'sprintpilot_secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use('/api/story', storyRoutes);
+app.use('/api/auth', authRoutes);
+
+app.use(express.static(path.join(__dirname, '../public')));
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/login.html'));
+});
+
+app.get('/', (req, res) => {
+  if (!req.user) {
+    return res.redirect('/login');
+  }
   res.sendFile(path.join(__dirname, '../public/story_input.html'));
 });
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
-app.use('/api/story', storyRouter);
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  logger.info({ port }, 'Server listening');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  logger.info(`SprintPilot server running on port ${PORT}`);
 });
