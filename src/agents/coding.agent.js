@@ -85,7 +85,7 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
     // Find the first message with a non-empty content property
     let foundContent = null;
     for (const m of resp.messages) {
-      if (m && m.content && m.status && m.status === "success" && ((typeof m.content === "string" && m.content.trim()) || (Array.isArray(m.content) && m.content.length) || (typeof m.content === "object" && m.content.text))) {
+      if (m && m.content && m.response_metadata && m.response_metadata.finish_reason === "stop" && ((typeof m.content === "string" && m.content.trim()) || (Array.isArray(m.content) && m.content.length) || (typeof m.content === "object" && m.content.text))) {
         foundContent = m.content;
         logger.info({ foundContent }, "Found message with non-empty content");
         break;
