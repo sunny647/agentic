@@ -114,49 +114,40 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
 
   logger.info({ finalResponse }, "Normalized AI response");
 
-
   // --- Extract strict JSON ---
   let files = { files: {} };
   try {
     let candidate = finalResponse;
     logger.info({ candidate }, "Candidate response for JSON extraction");
 
-    // Handle escaped JSON (e.g. {\"files\":...})
-    if (candidate.includes('\"')) {
-      logger.info("Escaped JSON detected, unescaping");
-      candidate = candidate
-        .replace(/\"/g, '"')
-        .replace(/\\n/g, '\n')
-        .replace(/\\\\/g, '\\');
-    }
-
-    // Match the first {...} block
+    // Find the first {...} block
     const match = candidate.match(/\{[\s\S]*\}/);
-    logger.info({ match }, "JSON object match result");
-    // Handle escaped JSON (e.g. {\"files\":...})
-    if (match[0].includes('\"')) {
-      logger.info("Escaped JSON detected, unescaping");
-      match[0] = match[0]
-        .replace(/\"/g, '"')
-        .replace(/\\n/g, '\n')
-        .replace(/\\\\/g, '\\');
-    }
-    if (match) {
-    logger.info({ match }, "JSON object match result");
-      let parsed = JSON.parse(match[0]);
-      logger.info({ parsed }, "Parsed JSON object from AI output");
-      // If the parsed object does not have a 'files' key, wrap it
-      if (!parsed.files) {
-        logger.info("No 'files' key detected, wrapping parsed object");
-        parsed = { files: parsed };
-      }
-      files = JSON.parse(JSON.stringify(parsed)); // normalize
-    } else {
+    if (!match) {
       throw new Error("No JSON object found in AI output");
     }
+
+    let jsonString = match[0];
+
+    // If it looks like escaped JSON, clean it once
+    if (jsonString.includes('\"')) {
+      logger.info("Escaped JSON detected, unescaping");
+      jsonString = jsonString
+        .replace(/\"/g, '"')
+        .replace(/\\n/g, '\n')
+        .replace(/\\/g, '\\');
+    }
+
+    // Sanitize: replace literal newlines and carriage returns inside quoted values with \n
+    jsonString = jsonString.replace(/("(?:[^"\\]|\\.)*")/g, (m) => m.replace(/\n/g, '\\n').replace(/\r/g, ''));
+
+    const parsed = JSON.parse(jsonString);
+    logger.info({ parsed }, "Parsed JSON object from AI output");
+
+    files = parsed.files ? parsed : { files: parsed }; // ensure files key
   } catch (err) {
     logger.error({ finalResponse, err }, "Failed to parse AI JSON output");
   }
+
 
   logger.info({ files }, 'Parsed code changes');
 
