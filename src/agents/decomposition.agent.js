@@ -79,8 +79,8 @@ export async function decompositionAgent(state) {
       description: `Auto-generated sub-task for: ${task.task}`
     }));
     try {
-      // const jiraResult = await jiraTools.createSubTasks.execute({ parentIssueId, tasks });
-      // logger.info({ parentIssueId, tasks, jiraResult }, 'Jira sub-tasks created after codingTasks mapping');
+      const jiraResult = await jiraTools.createSubTasks.execute({ parentIssueId, tasks });
+      logger.info({ parentIssueId, tasks, jiraResult }, 'Jira sub-tasks created after codingTasks mapping');
     } catch (err) {
       logger.error({ parentIssueId, tasks, error: err.message }, 'Failed to create Jira sub-tasks after codingTasks mapping');
     }

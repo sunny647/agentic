@@ -11,8 +11,8 @@ dotenv.config();
 export async function codingAgent(state) {
   const codeAgent = await getCodeAgent();
   logger.info({ state }, 'codingAgent called');
+  let validationNotes = [];
 
-  // --- Setup repo/branch info ---
   const storyKey = state.storyKey || `task-${Date.now()}`;
   const branchName = `feature/${storyKey}-${Math.random().toString(36).substr(2, 5)}`;
   state.branchName = branchName;
@@ -35,7 +35,6 @@ export async function codingAgent(state) {
     };
   }
 
-  // --- Prompt setup ---
   const system = `You are a senior full-stack engineer.
 You will be given a Jira story and must propose code changes.
 
@@ -43,7 +42,7 @@ You have access to a tool:
 - getFiles(paths): returns the latest content of multiple files from the repo. Pass a list of file paths as 'paths'.
 
 Rules:
-- For modifying existing files, ALWAYS call getFiles(paths) first, passing all needed file paths in a single call.
+- For modifying existing files, you can call getFiles(paths) first, passing all needed file paths in a single call.
 - When responding with changes, return the FULL file content, not diffs.
 - Respond strictly in JSON:
   {
@@ -54,6 +53,10 @@ Rules:
     }
   }
 - Do not add explanations outside JSON.
+- DO not make more than 5 tool calls to getFiles per request, you can request for multiple files in one call.
+- Do not request directories (like "src/" or "src/web/"), only concrete file paths.
+- If a file does not exist (response null), proceed without it instead of retrying.
+- Stop requesting more files once you have enough context to generate changes.
 
 Project context: ${JSON.stringify(state.contextJson)}
 Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
@@ -63,41 +66,96 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
 
   const user = `Story: ${state.enrichedStory || state.story}\n\nTasks:\n- ${tasks.join('\n- ')}`;
 
-  // --- Agent execution ---
   const resp = await codeAgent.invoke({
     messages: [
-      {
-        role: "system",
-        content: [{ type: "text", text: system }],
-      },
-      {
-        role: "user",
-        content: [{ type: "text", text: user }],
-      },
+      { role: "system", content: [{ type: "text", text: system }] },
+      { role: "user", content: [{ type: "text", text: user }] },
     ],
   });
 
   logger.info({ response: JSON.stringify(resp) }, 'Coding Agent response');
 
-  // Normalize output
+    // --- Normalize output ---
+  logger.info({ resp }, "Raw AI response");
   let finalResponse = "";
+
   if (Array.isArray(resp?.messages)) {
-    const last = resp.messages.findLast(m => m.role === "assistant");
-    if (last?.content?.[0]?.text) {
-      finalResponse = last.content[0].text.trim();
-    } else if (typeof last?.content === "string") {
-      finalResponse = last.content.trim();
+    logger.info({ messages: resp.messages }, "AI response messages array detected");
+
+    // Find the first message with a non-empty content property
+    let foundContent = null;
+    for (const m of resp.messages) {
+      if (m && m.content && m.status && m.status === "success" && ((typeof m.content === "string" && m.content.trim()) || (Array.isArray(m.content) && m.content.length) || (typeof m.content === "object" && m.content.text))) {
+        foundContent = m.content;
+        logger.info({ foundContent }, "Found message with non-empty content");
+        break;
+      }
     }
-  } else {
-    finalResponse = resp?.content || resp?.output || "";
+
+    if (foundContent) {
+      if (typeof foundContent === "string" && foundContent.trim()) {
+        finalResponse = foundContent.trim();
+      } else if (Array.isArray(foundContent)) {
+        finalResponse = foundContent.map(c => (typeof c === "string" ? c : c.text || "")).join("\n").trim();
+      } else if (foundContent.text) {
+        finalResponse = foundContent.text.trim();
+      }
+    }
   }
 
-  let files = {};
+  logger.info({ finalResponse }, "Normalized AI response after messages array check");
+
+  // Fallbacks
+  if (!finalResponse && typeof resp?.content === "string") {
+    finalResponse = resp.content.trim();
+  } else if (!finalResponse && resp?.output) {
+    finalResponse = resp.output.trim();
+  }
+
+  logger.info({ finalResponse }, "Normalized AI response");
+
+
+  // --- Extract strict JSON ---
+  let files = { files: {} };
   try {
-    files = JSON.parse(finalResponse);
+    let candidate = finalResponse;
+    logger.info({ candidate }, "Candidate response for JSON extraction");
+
+    // Handle escaped JSON (e.g. {\"files\":...})
+    if (candidate.includes('\"')) {
+      logger.info("Escaped JSON detected, unescaping");
+      candidate = candidate
+        .replace(/\"/g, '"')
+        .replace(/\\n/g, '\n')
+        .replace(/\\\\/g, '\\');
+    }
+
+    // Match the first {...} block
+    const match = candidate.match(/\{[\s\S]*\}/);
+    logger.info({ match }, "JSON object match result");
+    // Handle escaped JSON (e.g. {\"files\":...})
+    if (match[0].includes('\"')) {
+      logger.info("Escaped JSON detected, unescaping");
+      match[0] = match[0]
+        .replace(/\"/g, '"')
+        .replace(/\\n/g, '\n')
+        .replace(/\\\\/g, '\\');
+    }
+    if (match) {
+    logger.info({ match }, "JSON object match result");
+      let parsed = JSON.parse(match[0]);
+      logger.info({ parsed }, "Parsed JSON object from AI output");
+      // If the parsed object does not have a 'files' key, wrap it
+      if (!parsed.files) {
+        logger.info("No 'files' key detected, wrapping parsed object");
+        parsed = { files: parsed };
+      }
+      files = JSON.parse(JSON.stringify(parsed)); // normalize
+    } else {
+      throw new Error("No JSON object found in AI output");
+    }
   } catch (err) {
-    logger.error({ finalResponse }, "Failed to parse AI JSON output");
-    files = { files: {} }; // fallback
+    logger.error({ finalResponse, err }, "Failed to parse AI JSON output");
   }
 
   logger.info({ files }, 'Parsed code changes');
@@ -108,18 +166,13 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
     if (change.action === 'delete') {
       commitFileList.push({ path, action: 'delete' });
     } else if (change.action === 'modify' || change.action === 'create') {
-      commitFileList.push({
-        path,
-        action: change.action,
-        content: change.content,
-      });
+      commitFileList.push({ path, action: change.action, content: change.content });
     }
   }
 
   logger.info({ commitFileList }, 'Prepared commit file list');
 
-  // --- GitHub automation ---
-  if (!commitFileList || commitFileList.length === 0) {
+  if (!commitFileList.length) {
     logger.warn('codingAgent: No code changes to commit, skipping commit and PR creation');
     validationNotes.push('No code changes detected, commit and PR steps skipped.');
     return {
@@ -132,21 +185,14 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
     };
   }
 
-  // 1. Create branch
   try {
-    await createBranch({
-      owner: state.repoOwner,
-      repo: state.repoName,
-      newBranch: branchName,
-      baseBranch: state.baseBranch,
-    });
+    await createBranch({ owner: state.repoOwner, repo: state.repoName, newBranch: branchName, baseBranch: state.baseBranch });
     logger.info({ branchName }, 'Branch created');
   } catch (err) {
     validationNotes.push(`Branch creation failed: ${err.message}`);
     logger.error({ err }, 'Branch creation failed');
   }
 
-  // 2. Commit files
   try {
     await githubCommitFiles({
       owner: state.repoOwner,
@@ -161,7 +207,6 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
     logger.error({ err }, 'Commit failed');
   }
 
-  // 3. Create PR
   let prUrl = null;
   try {
     const pr = await createPR({

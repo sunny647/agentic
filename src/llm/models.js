@@ -30,7 +30,8 @@ export async function getCodeAgent() {
         llm: model,
         tools: [getFiles],
         prompt: `You are a coding assistant.
-  Always use the get_files tool when asked to retrieve file content from GitHub.`,
+You can use the get_files tool to retrieve file content from GitHub for suggesting code changes to already existing files.
+When responding with changes, return the FULL file content, not diffs. Respond strictly in JSON: { "files": { ... } }.`,
         verbose: true,
     });
 
