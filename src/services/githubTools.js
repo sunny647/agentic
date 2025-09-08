@@ -2,30 +2,25 @@
 import { Octokit } from "@octokit/rest";
 import { applyPatch } from "diff";
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+import { z } from "zod";
+import { tool } from "@langchain/core/tools";
+// --- Setup repo/branch info ---
 
-export const getFileTool = {
-  name: "getFile",
-  description: "Get the latest content of a file from the repo.",
-  args: {
-    path: { type: "string", description: "Path to the file" },
-    owner: { type: "string", description: "Repo owner" },
-    repo: { type: "string", description: "Repo name" },
-    ref: { type: "string", description: "Branch or ref", optional: true }
-  },
-  call: async function({ path, owner, repo, ref = "main" }) {
-    const { data } = await octokit.repos.getContent({ owner, repo, path, ref });
-    if ("content" in data) {
-      return Buffer.from(data.content, "base64").toString("utf-8");
-    }
-    throw new Error("File not found or is a directory.");
-  }
-};
 /**
- * Get file content from a branch
+ * Get file content from base branch
  */
-export async function getFile({ owner, repo, path, ref = "main" }) {
+export async function getFile({ path, ref }) {
   try {
-    const { data } = await octokit.repos.getContent({ owner, repo, path, ref });
+    const baseBranch = ref || process.env.GIT_DEFAULT_BRANCH || "main";
+    const repoOwner = process.env.GITHUB_REPO_OWNER;
+    const repoName = process.env.GITHUB_REPO_NAME;
+
+    const { data } = await octokit.repos.getContent({
+      owner: repoOwner,
+      repo: repoName,
+      path,
+      ref: baseBranch,
+    });
 
     if ("content" in data) {
       return {
@@ -43,6 +38,31 @@ export async function getFile({ owner, repo, path, ref = "main" }) {
     throw err;
   }
 }
+
+/**
+ * LangChain Tool: getFiles
+ */
+export const getFiles = tool(
+  async ({ paths }) => {
+    const results = {};
+    for (const path of paths) {
+      try {
+        const file = await getFile({ path });
+        results[path] = file.content;
+      } catch (err) {
+        results[path] = null;
+      }
+    }
+    return results;
+  },
+  {
+    name: "get_files",
+    description: "Retrieve the latest content of multiple files from the GitHub repo.",
+    schema: z.object({
+      paths: z.array(z.string()).describe("List of file paths to retrieve"),
+    }),
+  }
+);
 
 /**
  * Create a new branch from base branch
@@ -70,6 +90,11 @@ export async function createBranch({ owner, repo, newBranch, baseBranch }) {
  * Commit file(s) to a branch. Supports {action: create|modify|delete, patch}.
  */
 export async function commitFiles({ owner, repo, branch, message, files }) {
+  // Validate files array is not empty
+  if (!files || files.length === 0) {
+    throw new Error('commitFiles: No files provided for commit. Skipping commit.');
+  }
+
   // 1. Get latest commit ref
   const { data: ref } = await octokit.git.getRef({
     owner,
@@ -167,6 +192,7 @@ export async function createPR({ owner, repo, title, body, head, base }) {
 // Export as a grouped object if you want convenience import
 export const githubTools = {
   getFile,
+  getFiles,
   createBranch,
   commitFiles,
   createPR,

@@ -12,15 +12,19 @@
     "@langchain/langgraph": "^0.4.6",
     "@langchain/langgraph-supervisor": "^0.0.18",
     "@langchain/openai": "^0.6.9",
+    "@octokit/rest": "^22.0.0",
     "chromadb": "^3.0.14",
+    "diff": "^8.0.2",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jira-client": "^8.2.2",
+    "langchain": "^0.3.33",
+    "octokit": "^5.0.3",
     "openai": "^5.15.0",
     "pg": "^8.16.3",
     "pino": "^9.9.0",
     "pino-http": "^10.5.0",
     "uuid": "^11.1.0",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   }
 }

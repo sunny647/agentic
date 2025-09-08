@@ -40,10 +40,10 @@ export async function codingAgent(state) {
 You will be given a Jira story and must propose code changes.
 
 You have access to a tool:
-- getFile(path): returns the latest content of a file from the repo.
+- getFiles(paths): returns the latest content of multiple files from the repo. Pass a list of file paths as 'paths'.
 
 Rules:
-- For modifying an existing file, ALWAYS call getFile(path) first.
+- For modifying existing files, ALWAYS call getFiles(paths) first, passing all needed file paths in a single call.
 - When responding with changes, return the FULL file content, not diffs.
 - Respond strictly in JSON:
   {
@@ -63,34 +63,75 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
 
   const user = `Story: ${state.enrichedStory || state.story}\n\nTasks:\n- ${tasks.join('\n- ')}`;
 
-  // Build prompt string for agent input
-  const prompt = `${system}\n\n${user}`;
+  // --- Agent execution ---
+  const resp = await codeAgent.invoke({
+    messages: [
+      {
+        role: "system",
+        content: [{ type: "text", text: system }],
+      },
+      {
+        role: "user",
+        content: [{ type: "text", text: user }],
+      },
+    ],
+  });
 
-  // Use agent executor for tool calling
-  const resp = await codeAgent.invoke({ input: prompt });
-  let finalResponse = resp;
+  logger.info({ response: JSON.stringify(resp) }, 'Coding Agent response');
 
-  // --- Parse final JSON ---
-  let files = {};
-  let validationNotes = [];
-  try {
-    files = JSON.parse(finalResponse.content);
-  } catch (err) {
-    validationNotes.push('Could not parse as JSON, capturing raw output');
-    files = { 'IMPLEMENTATION_NOTES.md': { action: 'create', content: String(finalResponse.content) } };
+  // Normalize output
+  let finalResponse = "";
+  if (Array.isArray(resp?.messages)) {
+    const last = resp.messages.findLast(m => m.role === "assistant");
+    if (last?.content?.[0]?.text) {
+      finalResponse = last.content[0].text.trim();
+    } else if (typeof last?.content === "string") {
+      finalResponse = last.content.trim();
+    }
+  } else {
+    finalResponse = resp?.content || resp?.output || "";
   }
+
+  let files = {};
+  try {
+    files = JSON.parse(finalResponse);
+  } catch (err) {
+    logger.error({ finalResponse }, "Failed to parse AI JSON output");
+    files = { files: {} }; // fallback
+  }
+
+  logger.info({ files }, 'Parsed code changes');
 
   let commitFileList = [];
   for (const [path, change] of Object.entries(files.files || {})) {
     logger.info({ path, action: change.action }, `Processing ${path}`);
     if (change.action === 'delete') {
-      commitFileList.push({ path, delete: true });
-    } else {
-      commitFileList.push({ path, content: change.content });
+      commitFileList.push({ path, action: 'delete' });
+    } else if (change.action === 'modify' || change.action === 'create') {
+      commitFileList.push({
+        path,
+        action: change.action,
+        content: change.content,
+      });
     }
   }
 
+  logger.info({ commitFileList }, 'Prepared commit file list');
+
   // --- GitHub automation ---
+  if (!commitFileList || commitFileList.length === 0) {
+    logger.warn('codingAgent: No code changes to commit, skipping commit and PR creation');
+    validationNotes.push('No code changes detected, commit and PR steps skipped.');
+    return {
+      ...state,
+      codePatches: files,
+      commitFiles: [],
+      prUrl: null,
+      logs: [...(state.logs || []), 'coding:skipped:no_code_changes'],
+      validationNotes,
+    };
+  }
+
   // 1. Create branch
   try {
     await createBranch({
