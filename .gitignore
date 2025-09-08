@@ -2,3 +2,5 @@
 node_modules/
 pipeline-logs.txt
 *.log
+sprint-pilot.log
+pipeline-logs.txt
