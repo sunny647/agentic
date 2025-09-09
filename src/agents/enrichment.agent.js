@@ -3,7 +3,21 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { smallModel } from '../llm/models.js';
 import logger from '../logger.js';
-// import { jiraClient } from '../mcp/jira.client.js'; // wrapper for MCP Jira server
+import { z } from "zod"; // For schema definition
+import { jiraTools } from '../services/jiraTools.js';
+
+// Define the schema for the enrichment agent's output
+const EnrichmentOutputSchema = z.object({
+  description: z.string().describe("The enriched user story description, clarifying scope, assumptions, and dependencies."),
+  acceptanceCriteria: z.array(z.string()).describe("A detailed list of acceptance criteria, expanded to cover edge cases and risks."),
+});
+
+// IMPORTANT: Create a model instance configured for structured output
+// Ensure smallModel is actually an instance of ChatOpenAI or similar
+const structuredEnrichmentModel =
+  smallModel.withStructuredOutput(EnrichmentOutputSchema, {
+    name: "EnrichmentOutput",
+  });
 
 export async function enrichmentAgent(state) {
   logger.info({ state }, 'enrichmentAgent called');
@@ -14,7 +28,6 @@ export async function enrichmentAgent(state) {
       content:
         'You are a business analyst. Enrich the user story by clarifying scope, assumptions, and dependencies. ' +
         'Also expand the acceptance criteria into a detailed list that covers edge cases and risks. ' +
-        'Output JSON with { "description": "...", "acceptanceCriteria": ["...","..."] }' +
         `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`
     },
     {
@@ -23,34 +36,35 @@ export async function enrichmentAgent(state) {
     },
   ];
 
-  const resp = await smallModel.invoke(prompt);
-  let text = resp.content?.toString?.() || resp.content;
-  // Remove markdown code block markers if present
-  text = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
-  logger.info({ text }, 'Raw enrichment model output');
+ let enriched = {};
 
-  let enriched = {};
   try {
-    enriched = JSON.parse(text);
-  logger.info({ enriched }, 'Enriched story');
-  } catch {
+    // Invoke the model with structured output
+    enriched = await structuredEnrichmentModel.invoke(prompt);
+    logger.info({ enriched }, 'Enriched story (structured output)');
+
+  } catch (error) {
+    logger.error({ error }, 'Enrichment model failed to produce structured JSON. Falling back.');
+    // Fallback in case the model *still* fails (e.g., if the model doesn't support response_format or hits an internal error)
     enriched = {
       description: state.story,
       acceptanceCriteria: [],
-      feedback: 'Parsing failed, using original story.',
+      // feedback: 'LLM failed to produce valid structured JSON. Using original story.', // If you add feedback to schema
     };
   }
 
   // Update Jira story (if id present)
-  if (state.jiraId) {
+  logger.info({ jiraId: state.issueID }, 'Checking for Jira ID to update');
+  if (state.issueID) {
     try {
-  logger.info({ enriched }, 'Enriched Jira story');
-      //   await jiraClient.updateStory(state.jiraId, {
-      //     description: enriched.description,
-      //     acceptanceCriteria: enriched.acceptanceCriteria,
-      //   });
+      logger.info({ enriched }, 'Enriched Jira story');
+      await jiraTools.updateStory.execute({ // Call the execute method of the tool
+        issueId: state.issueID,
+        description: enriched.description,
+        acceptanceCriteria: enriched.acceptanceCriteria,
+      });
     } catch (err) {
-  logger.error({ err }, 'Jira update failed');
+      logger.error({ err }, 'Jira update failed');
     }
   }
 
@@ -59,10 +73,7 @@ export async function enrichmentAgent(state) {
   const nextState = {
     ...state,
     enrichedStory: enriched.description,
-    context: {
-      ...(state.context || {}),
-      acceptanceCriteria: enriched.acceptanceCriteria,
-    },
+    acceptanceCriteria: enriched.acceptanceCriteria,
     logs: [...logs, 'enrichment:done'],
   };
   logger.info({ nextState }, 'enrichmentAgent returning state');

@@ -1,7 +1,5 @@
-
 import logger from '../logger.js';
 import JiraClient from 'jira-client';
-
 
 const jira = new JiraClient({
   protocol: 'https',
@@ -12,7 +10,23 @@ const jira = new JiraClient({
   strictSSL: true
 });
 
+// Helper function to convert a string to a basic ADF paragraph
+const toAdfParagraph = (text) => ({
+  type: 'paragraph',
+  content: [{ type: 'text', text: text || '' }]
+});
+
+// Helper function to convert an array of strings to an ADF bullet list
+const toAdfBulletList = (items) => ({
+  type: 'bulletList',
+  content: items.map(item => ({
+    type: 'listItem',
+    content: [toAdfParagraph(item)]
+  }))
+});
+
 export const jiraTools = {
+  // Existing createSubTasks tool
   createSubTasks: {
     name: 'createSubTasks',
     description: 'Create multiple Jira sub-tasks under a parent story',
@@ -39,46 +53,47 @@ export const jiraTools = {
       const results = [];
       let parent, projectKey;
       try {
-      parent = await jira.findIssue(parentIssueId);
-      logger.info({ parent }, 'Fetched parent issue for createSubTasks');
-      projectKey = parent.fields.project.key;
+        parent = await jira.findIssue(parentIssueId);
+        logger.info({ parent }, 'Fetched parent issue for createSubTasks');
+        projectKey = parent.fields.project.key;
       } catch (err) {
-      // Log full error details for debugging
-      logger.error({
-        parentIssueId,
-        errorMessage: err && err.message ? err.message : null,
-        errorStack: err && err.stack ? err.stack : null,
-        errorResponse: err && err.response ? err.response : null,
-        errorRaw: err
-      }, 'Failed to fetch parent issue in createSubTasks');
-      return { error: `Failed to fetch parent issue: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}` };
+        // Log full error details for debugging
+        logger.error({
+          parentIssueId,
+          errorMessage: err && err.message ? err.message : null,
+          errorStack: err && err.stack ? err.stack : null,
+          errorResponse: err && err.response ? err.response : null,
+          errorRaw: err
+        }, 'Failed to fetch parent issue in createSubTasks');
+        return { error: `Failed to fetch parent issue: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}` };
       }
       for (const { summary, description } of tasks) {
         logger.info({ summary, description }, 'Creating Jira sub-task');
         try {
-              // Convert description to Atlassian Document Format (ADF)
-              const adfDescription = {
-                type: 'doc',
-                version: 1,
-                content: [
-                  {
-                    type: 'paragraph',
-                    content: [
-                      { type: 'text', text: description || '' }
-                    ]
-                  }
-                ]
-              };
-              // Fetch all issue types for the project to get the sub-task type ID
-              const subTask = await jira.addNewIssue({
-                fields: {
-                  project: { key: projectKey },
-                  parent: { key: parentIssueId },
-                  summary,
-                  description: adfDescription,
-                  issuetype: { id: '10002' }
-                }
-              });
+          // Convert description to Atlassian Document Format (ADF) using helper
+          const adfDescription = {
+            type: 'doc',
+            version: 1,
+            content: [toAdfParagraph(description)]
+          };
+          
+          // You might need to dynamically find the sub-task issue type ID
+          // For now, keeping '10002' which is common, but getProjectMeta below is safer.
+          const issueTypeMeta = await jira.getProjectIssueTypeMappings(projectKey);
+          const subTaskType = issueTypeMeta.find(type => type.issueType.subtask);
+          if (!subTaskType) {
+              throw new Error(`Sub-task issue type not found for project: ${projectKey}`);
+          }
+
+          const subTask = await jira.addNewIssue({
+            fields: {
+              project: { key: projectKey },
+              parent: { key: parentIssueId },
+              summary,
+              description: adfDescription,
+              issuetype: { id: subTaskType.issueType.id } // Use dynamically found sub-task ID
+            }
+          });
           logger.info({ summary, key: subTask.key }, 'Sub-task created');
           results.push({ summary, key: subTask.key });
         } catch (err) {
@@ -90,6 +105,8 @@ export const jiraTools = {
       return results;
     }
   },
+
+  // Existing createSubTask tool (NOTE: Updated with ADF conversion and dynamic issuetype)
   createSubTask: {
     name: 'createSubTask',
     description: 'Create a Jira sub-task under a parent story',
@@ -114,23 +131,26 @@ export const jiraTools = {
         return { error: 'Failed to fetch parent issue: ' + err.message };
       }
       try {
+        // Convert description to Atlassian Document Format (ADF)
+        const adfDescription = {
+          type: 'doc',
+          version: 1,
+          content: [toAdfParagraph(description)]
+        };
+
+        const issueTypeMeta = await jira.getProjectIssueTypeMappings(projectKey);
+        const subTaskType = issueTypeMeta.find(type => type.issueType.subtask);
+        if (!subTaskType) {
+            throw new Error(`Sub-task issue type not found for project: ${projectKey}`);
+        }
+
         const subTask = await jira.addNewIssue({
           fields: {
-              // Fetch all issue types for the project to get the sub-task type ID
-              project: { key: projectKey },
-              parent: { key: parentIssueId },
-              summary,
-              description,
-              issuetype: (() => {
-                // This is a synchronous block for single sub-task creation
-                // Ideally, cache this if called repeatedly
-                return jira.getProject(projectKey)
-                  .then(projectMeta => {
-                    const subTaskType = (projectMeta.issueTypes || []).find(type => type.subtask || type.name.toLowerCase().includes('sub-task'));
-                    if (!subTaskType) throw new Error('Sub-task issue type not found for project: ' + projectKey);
-                    return { id: subTaskType.id };
-                  });
-              })()
+            project: { key: projectKey },
+            parent: { key: parentIssueId },
+            summary,
+            description: adfDescription, // Use ADF description
+            issuetype: { id: subTaskType.issueType.id } // Use dynamically found sub-task ID
           }
         });
         logger.info({ summary, key: subTask.key }, 'Sub-task created');
@@ -142,6 +162,73 @@ export const jiraTools = {
     }
   },
 
+  // NEW: updateStory tool
+  updateStory: {
+    name: 'updateStory',
+    description: 'Update the description and/or acceptance criteria of a Jira story',
+    parameters: {
+      type: 'object',
+      properties: {
+        issueId: { type: 'string' },
+        description: { type: 'string', description: 'The main description of the story.' },
+        acceptanceCriteria: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'An array of strings, where each string is an acceptance criterion.'
+        }
+      },
+      required: ['issueId'] // description and acceptanceCriteria can be optional for update
+    },
+    execute: async ({ issueId, description, acceptanceCriteria }) => {
+      logger.info({ issueId, description, acceptanceCriteria }, 'updateStory called');
+      try {
+        const adfContent = [];
+
+        // Add main description if provided
+        if (description) {
+          adfContent.push(toAdfParagraph(description));
+        }
+
+        // Add acceptance criteria if provided
+        if (acceptanceCriteria && acceptanceCriteria.length > 0) {
+          // Add a heading for acceptance criteria
+          adfContent.push({
+            type: 'heading',
+            attrs: { level: 3 },
+            content: [{ type: 'text', text: 'Acceptance Criteria:' }]
+          });
+          adfContent.push(toAdfBulletList(acceptanceCriteria));
+        }
+
+        const adfDescription = {
+          type: 'doc',
+          version: 1,
+          content: adfContent
+        };
+
+        const updateFields = {
+          fields: {
+            description: adfDescription
+          }
+        };
+
+        await jira.updateIssue(issueId, updateFields);
+        logger.info({ issueId }, 'Jira story updated successfully');
+        return { success: true, issueId };
+      } catch (err) {
+        logger.error({
+          issueId,
+          errorMessage: err && err.message ? err.message : null,
+          errorStack: err && err.stack ? err.stack : null,
+          errorResponse: err && err.response ? err.response : null,
+          errorRaw: err
+        }, 'Failed to update Jira story');
+        return { error: `Failed to update Jira story: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}` };
+      }
+    }
+  },
+
+  // Existing getIssue tool
   getIssue: {
     name: 'getIssue',
     description: 'Get details of a Jira issue',
@@ -163,6 +250,7 @@ export const jiraTools = {
     }
   },
 
+  // Existing listSubTasks tool
   listSubTasks: {
     name: 'listSubTasks',
     description: 'List all sub-tasks for a parent Jira issue',
