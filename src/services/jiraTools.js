@@ -70,29 +70,29 @@ export const jiraTools = {
       for (const { summary, description } of tasks) {
         logger.info({ summary, description }, 'Creating Jira sub-task');
         try {
-          // Convert description to Atlassian Document Format (ADF) using helper
-          const adfDescription = {
-            type: 'doc',
-            version: 1,
-            content: [toAdfParagraph(description)]
-          };
-
-          // Dynamically find the sub-task issue type ID
-          const issueTypeMeta = await jira.getProjectIssueTypeMappings(projectKey);
-          const subTaskType = issueTypeMeta.find(type => type.issueType.subtask);
-          if (!subTaskType) {
-              throw new Error(`Sub-task issue type not found for project: ${projectKey}`);
-          }
-
-          const subTask = await jira.addNewIssue({
-            fields: {
-              project: { key: projectKey },
-              parent: { key: parentIssueId },
-              summary,
-              description: adfDescription,
-              issuetype: { id: subTaskType.issueType.id } // Use dynamically found sub-task ID
-            }
-          });
+              // Convert description to Atlassian Document Format (ADF)
+              const adfDescription = {
+                type: 'doc',
+                version: 1,
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [
+                      { type: 'text', text: description || 'Automated sub-task description' }
+                    ]
+                  }
+                ]
+              };
+              // Fetch all issue types for the project to get the sub-task type ID
+              const subTask = await jira.addNewIssue({
+                fields: {
+                  project: { key: projectKey },
+                  parent: { key: parentIssueId },
+                  summary,
+                  description: adfDescription,
+                  issuetype: { id: '10002' }
+                }
+              });
           logger.info({ summary, key: subTask.key }, 'Sub-task created');
           results.push({ summary, key: subTask.key });
         } catch (err) {
@@ -130,26 +130,14 @@ export const jiraTools = {
         return { error: 'Failed to fetch parent issue: ' + err.message };
       }
       try {
-        // Convert description to Atlassian Document Format (ADF)
-        const adfDescription = {
-          type: 'doc',
-          version: 1,
-          content: [toAdfParagraph(description)]
-        };
-
-        const issueTypeMeta = await jira.getProjectIssueTypeMappings(projectKey);
-        const subTaskType = issueTypeMeta.find(type => type.issueType.subtask);
-        if (!subTaskType) {
-            throw new Error(`Sub-task issue type not found for project: ${projectKey}`);
-        }
-
         const subTask = await jira.addNewIssue({
           fields: {
-            project: { key: projectKey },
-            parent: { key: parentIssueId },
-            summary,
-            description: adfDescription, // Use ADF description
-            issuetype: { id: subTaskType.issueType.id } // Use dynamically found sub-task ID
+              // Fetch all issue types for the project to get the sub-task type ID
+              project: { key: projectKey },
+              parent: { key: parentIssueId },
+              summary,
+              description,
+              issuetype: { id: '10002' }
           }
         });
         logger.info({ summary, key: subTask.key }, 'Sub-task created');

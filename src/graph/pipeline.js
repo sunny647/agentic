@@ -94,14 +94,7 @@ export async function runPipeline(input) {
     contextJson,
     projectFileMetadataJson
   });
-
-  // Debug log for initial state
-  try {
-    logger.info({ init }, 'DEBUG: Initial pipeline state (including issueID)');
-  } catch (e) {
-    // If logger import fails, ignore
-  }
-
+  logger.info('Initial State:', init);
   const result = await app.invoke(init);
   // Write logs to a file
   const logData = Array.isArray(result.logs) ? result.logs.join('\n') : String(result.logs);

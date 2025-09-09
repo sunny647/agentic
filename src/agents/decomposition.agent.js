@@ -1,71 +1,89 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// File: src/agents/decomposition.agent.js
-// ─────────────────────────────────────────────────────────────────────────────
+// src/agents/decomposition.agent.js
 import { smallModel } from '../llm/models.js';
 import { getContext } from '../context/context.manager.js';
 import { jiraTools } from '../services/jiraTools.js';
 import logger from '../logger.js';
+import { z } from "zod"; // Import Zod for schema definition
+
+// Define the schema for the detailed task item
+const DetailedTaskSchema = z.object({
+  task: z.string().describe("Summary or title of the technical subtask."),
+  solution: z.string().describe("Detailed solution approach, steps, or considerations for implementing this specific subtask."),
+});
+
+// Define the schema for the decomposition agent's output
+const DecompositionOutputSchema = z.object({
+  feTasks: z.array(DetailedTaskSchema).describe("List of Frontend technical subtasks, each with a detailed solution."),
+  beTasks: z.array(DetailedTaskSchema).describe("List of Backend technical subtasks, each with a detailed solution."),
+  sharedTasks: z.array(DetailedTaskSchema).describe("List of shared technical subtasks, each with a detailed solution."),
+  risks: z.array(z.string()).describe("List of identified technical risks related to the story implementation."),
+});
+
+// IMPORTANT: Create a model instance configured for structured output
+const structuredDecompositionModel =
+  smallModel.withStructuredOutput(DecompositionOutputSchema, {
+    name: "DecompositionOutput", // Optional: Name for clarity
+  });
 
 export async function decompositionAgent(state) {
   logger.info({ enrichedStory: state.enrichedStory }, 'decompositionAgent called');
   logger.info({ state }, 'decompositionAgent full state');
 
-  // Always pass the full state to getContext for robustness
-  const ctx = await getContext('decomposition', state);
+  // const ctx = await getContext('decomposition', state);
+
+  // Prepare the user content for the LLM
+  const userContent = JSON.stringify({
+    story: state.enrichedStory || state.story,
+    acceptanceCriteria: state.acceptanceCriteria,
+    contextDocs: state.contextJson,
+    projectFileMetadataJson: state.projectFileMetadataJson // Assuming ctx.documents is already an array of strings or suitable for JSON.stringify
+  }, null, 2);
+
 
   const prompt = [
     {
       role: 'system',
       content:
-        `You are a senior tech lead. Decompose the enriched story into clear technical subtasks for FE (Frontend) and BE (Backend).
-        Respond ONLY with a strict JSON object in this format:
-        {
-          "feTasks": ["<FE task 1>", "<FE task 2>", ...],
-          "beTasks": ["<BE task 1>", "<BE task 2>", ...],
-          "sharedTasks": ["<Shared task 1>", ...],
-          "risks": ["<Risk 1>", ...]
-        }
-        Do not include any markdown, explanation, or extra text. Only valid JSON. Use the following context (architecture docs, code references, acceptance criteria) to ensure correctness and alignment.` +
-        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`,
-    },
+        `You are a senior tech lead. Decompose the enriched user story into clear technical subtasks for Frontend (FE), Backend (BE), and Shared categories. For each subtask, provide a concise summary AND a detailed solution approach. Identify any potential technical risks.
+        Your response MUST be a valid JSON object strictly conforming to the following schema:
+        ${JSON.stringify(DecompositionOutputSchema.shape, null, 2)}
+        Use the provided project context (architecture documents, code references, acceptance criteria) to ensure correctness, alignment, and comprehensive decomposition.`},
     {
-      role: 'user', content: JSON.stringify({
-        story: state.enrichedStory || state.story,
-        acceptanceCriteria: ctx.acceptanceCriteria,
-        contextDocs: ctx.documents,
-      }, null, 2)
+      role: 'user', content: userContent
     },
   ];
 
-  const resp = await smallModel.invoke(prompt);
-  const text = resp.content?.toString?.() || resp.content;
-  logger.info({ text }, 'decompositionAgent LLM response');
+  let decompositionResult; // Declare variable without initializer
 
-  // Try to parse LLM output as JSON first
-  let feTasks = [];
-  let beTasks = [];
-  let sharedTasks = [];
-  let risksTasks = [];
-  let parsed = null;
   try {
-    parsed = JSON.parse(text);
-    feTasks = Array.isArray(parsed.feTasks) ? parsed.feTasks : [];
-    beTasks = Array.isArray(parsed.beTasks) ? parsed.beTasks : [];
-    sharedTasks = Array.isArray(parsed.sharedTasks) ? parsed.sharedTasks : [];
-    risksTasks = Array.isArray(parsed.risks) ? parsed.risks : [];
-  } catch (e) {
-    // Fallback: extract from markdown if JSON parsing fails
-    logger.warn({ text }, 'decompositionAgent LLM response is not valid JSON');
+    // Invoke the model with structured output
+    decompositionResult = await structuredDecompositionModel.invoke(prompt);
+    logger.info({ decompositionResult }, 'Decomposition agent structured output');
+  } catch (error) {
+    logger.error({ error }, 'Decomposition model failed to produce structured JSON. Falling back to empty tasks.');
+    // Fallback in case the model *still* fails (e.g., API error, model internal failure)
+    decompositionResult = {
+      feTasks: [],
+      beTasks: [],
+      sharedTasks: [],
+      risks: [],
+    };
   }
 
-  // If markdown fallback is needed, implement here (currently not used)
+  // Extract from the structured result
+  const feTasks = decompositionResult.feTasks;
+  const beTasks = decompositionResult.beTasks;
+  const sharedTasks = decompositionResult.sharedTasks;
+  const risksTasks = decompositionResult.risks;
+
+
   const logs = Array.isArray(state.logs) ? state.logs : [];
 
-  // Map tasks for coding agent
+  // Map tasks for coding agent - now includes detailed solution
   const codingTasks = [
-    ...feTasks.map((task) => ({ type: 'FE', task })),
-    ...beTasks.map((task) => ({ type: 'BE', task })),
-    ...sharedTasks.map((task) => ({ type: 'Shared', task })),
+    ...feTasks.map((taskObj) => ({ type: 'FE', task: taskObj.task, solution: taskObj.solution })),
+    ...beTasks.map((taskObj) => ({ type: 'BE', task: taskObj.task, solution: taskObj.solution })),
+    ...sharedTasks.map((taskObj) => ({ type: 'Shared', task: taskObj.task, solution: taskObj.solution })),
   ];
   logger.info({ codingTasks }, 'decompositionAgent mapped codingTasks');
 
@@ -75,8 +93,8 @@ export async function decompositionAgent(state) {
     const parentIssueId = state.issueID || '';
     logger.info({ parentIssueId }, 'DEBUG: parentIssueId before Jira sub-task creation');
     const tasks = codingTasks.map(task => ({
-      summary: task.task,
-      description: `Auto-generated sub-task for: ${task.task}`
+      summary: `[${task.type}] ${task.task}`, // Prefix summary with type for clarity in Jira
+      description: `**Type:** ${task.type}\n\n**Task:** ${task.task}\n\n**Solution Approach:**\n${task.solution}`
     }));
     try {
       const jiraResult = await jiraTools.createSubTasks.execute({ parentIssueId, tasks });
@@ -93,9 +111,8 @@ export async function decompositionAgent(state) {
       beTasks,
       sharedTasks,
       risks: risksTasks,
-      rawOutput: text // keep full text for supervisor validation
     },
-    codingTasks,
+    codingTasks, // This now contains task summary and solution
     logs: [...logs, 'decomposition:done'],
   };
 }
