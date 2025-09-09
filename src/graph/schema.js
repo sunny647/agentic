@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { en } from 'zod/v4/locales';
 
 export const StoryStateSchema = z.object({
   requestId: z.string(),
@@ -37,6 +36,8 @@ export const StoryStateSchema = z.object({
     .optional(),
   contextJson: z.any().optional(),
   projectFileMetadataJson: z.any().optional(),
+  commitFiles: z.array(z.object({ path: z.string(), action: z.string(), content: z.string().optional() })).default([]),
+  prUrl: z.string().optional(),
 });
 
 export const defaultState = (partial) => ({

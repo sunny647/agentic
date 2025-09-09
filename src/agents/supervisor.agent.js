@@ -18,9 +18,9 @@ export async function supervisorAgent(state) {
   const {
     estimation,
     decomposition,
-    code,
     tests,
-    git,
+    commitFiles,
+    prUrl,
     logs = [],
   } = state;
 
@@ -46,9 +46,9 @@ ${JSON.stringify(state.story, null, 2)}
 Outputs so far:
 - Estimation: ${estimation ? JSON.stringify(estimation) : "Missing"}
 - Decomposition: ${decomposition ? JSON.stringify(decomposition) : "Missing"}
-- Code: ${code ? JSON.stringify(code) : "Missing"}
+- Code: ${commitFiles ? JSON.stringify(commitFiles) : "Missing"}
 - Tests: ${tests ? JSON.stringify(tests) : "Missing"}
-- Git: ${git ? JSON.stringify(git) : "Missing"}
+- Git: ${prUrl ? JSON.stringify(prUrl) : "Missing"}
 
 Return JSON in this exact structure:
 {

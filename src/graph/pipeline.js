@@ -10,6 +10,7 @@ import { testingAgent } from "../agents/testing.agent.js";
 import { supervisorAgent } from "../agents/supervisor.agent.js";
 import { defaultState } from "./schema.js";
 import logger from '../logger.js';
+import { commitFiles } from "../services/githubTools.js";
 
 
 export function buildStoryFlow() {
@@ -23,6 +24,8 @@ export function buildStoryFlow() {
       estimation: null,
       code: null,
       tests: null,
+      prUrl: null,
+      commitFiles: null,
       git: null,
       contextJson: null,
       projectFileMetadataJson: null,
