@@ -76,9 +76,8 @@ export const jiraTools = {
             version: 1,
             content: [toAdfParagraph(description)]
           };
-          
-          // You might need to dynamically find the sub-task issue type ID
-          // For now, keeping '10002' which is common, but getProjectMeta below is safer.
+
+          // Dynamically find the sub-task issue type ID
           const issueTypeMeta = await jira.getProjectIssueTypeMappings(projectKey);
           const subTaskType = issueTypeMeta.find(type => type.issueType.subtask);
           if (!subTaskType) {
@@ -224,6 +223,46 @@ export const jiraTools = {
           errorRaw: err
         }, 'Failed to update Jira story');
         return { error: `Failed to update Jira story: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}` };
+      }
+    }
+  },
+
+  // FIX APPLIED HERE: addComment tool now passes the ADF document directly as the comment body
+  addComment: {
+    name: 'addComment',
+    description: 'Add a comment to a Jira issue',
+    parameters: {
+      type: 'object',
+      properties: {
+        issueId: { type: 'string' },
+        comment: { type: 'string', description: 'The text content of the comment.' }
+      },
+      required: ['issueId', 'comment']
+    },
+    execute: async ({ issueId, comment }) => {
+      logger.info({ issueId, comment }, 'addComment called');
+      try {
+        // Construct the full Atlassian Document Format (ADF) for the comment
+        const adfDocument = {
+          type: 'doc',
+          version: 1,
+          content: [toAdfParagraph(comment)] // Use the helper to make a paragraph from the comment string
+        };
+
+        // The jira-client's addComment expects the ADF document directly as the second argument (the comment object)
+        await jira.addComment(issueId, adfDocument); // THIS IS THE KEY FIX
+        
+        logger.info({ issueId }, 'Comment added to Jira issue successfully');
+        return { success: true, issueId };
+      } catch (err) {
+        logger.error({
+          issueId,
+          errorMessage: err && err.message ? err.message : null,
+          errorStack: err && err.stack ? err.stack : null,
+          errorResponse: err && err.response ? err.response : null,
+          errorRaw: err
+        }, 'Failed to add comment to Jira issue');
+        return { error: `Failed to add comment to Jira issue: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}` };
       }
     }
   },
