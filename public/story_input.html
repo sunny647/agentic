@@ -4,13 +4,66 @@
   <meta charset="UTF-8">
   <title>Jira Issue Input - Agentic Supervisor</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 2em; }
+    :root {
+      --background-light: #f6f8fa;
+      --background-dark: #181a1b;
+      --form-bg-light: #d3d3d3;
+      --form-bg-dark: #23272b;
+      --text-light: #222;
+      --text-dark: #f6f8fa;
+      --button-bg: #800080;
+      --button-hover: #a020f0;
+      --button-text: #fff;
+      --result-bg-light: #f6f8fa;
+      --result-bg-dark: #23272b;
+      --input-bg-light: #fff;
+      --input-bg-dark: #23272b;
+      --input-border-light: #ccc;
+      --input-border-dark: #444;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2em;
+      background: var(--background-light);
+      color: var(--text-light);
+      transition: background 0.3s, color 0.3s;
+    }
     label { display: block; margin-top: 1em; }
-    textarea, input[type=text] { width: 100%; padding: 0.5em; margin-top: 0.5em; }
-    form#jiraForm { background: #d3d3d3; padding: 2em; border-radius: 8px; } /* Changed to grey */
-    button { margin-top: 1em; padding: 0.5em 2em; background: #800080; color: #fff; border: none; border-radius: 4px; cursor: pointer; } /* Purple button */
-    button:hover { background: #a020f0; }
-    .result { margin-top: 2em; background: #f6f8fa; padding: 1em; border-radius: 4px; min-height: 2em; }
+    textarea, input[type=text] {
+      width: 100%;
+      padding: 0.5em;
+      margin-top: 0.5em;
+      background: var(--input-bg-light);
+      color: var(--text-light);
+      border: 1px solid var(--input-border-light);
+      border-radius: 4px;
+      transition: background 0.3s, color 0.3s, border 0.3s;
+    }
+    form#jiraForm {
+      background: var(--form-bg-light);
+      padding: 2em;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+    button {
+      margin-top: 1em;
+      padding: 0.5em 2em;
+      background: var(--button-bg);
+      color: var(--button-text);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: var(--button-hover); }
+    .result {
+      margin-top: 2em;
+      background: var(--result-bg-light);
+      padding: 1em;
+      border-radius: 4px;
+      min-height: 2em;
+      transition: background 0.3s, color 0.3s;
+    }
     .spinner {
       display: inline-block;
       width: 32px;
@@ -25,9 +78,55 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    /* Night mode styles */
+    body.night-mode {
+      background: var(--background-dark);
+      color: var(--text-dark);
+    }
+    body.night-mode form#jiraForm {
+      background: var(--form-bg-dark);
+    }
+    body.night-mode .result {
+      background: var(--result-bg-dark);
+      color: var(--text-dark);
+    }
+    body.night-mode textarea,
+    body.night-mode input[type=text] {
+      background: var(--input-bg-dark);
+      color: var(--text-dark);
+      border: 1px solid var(--input-border-dark);
+    }
+    /* Night mode toggle button */
+    .night-toggle {
+      position: fixed;
+      top: 1.5em;
+      right: 2em;
+      z-index: 1000;
+      background: var(--form-bg-light);
+      color: var(--button-bg);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.5em;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: background 0.3s, color 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body.night-mode .night-toggle {
+      background: var(--form-bg-dark);
+      color: var(--button-hover);
+    }
+    .night-toggle:focus {
+      outline: 2px solid var(--button-hover);
+    }
   </style>
 </head>
 <body>
+  <button class="night-toggle" id="nightToggle" title="Toggle night mode" aria-label="Toggle night mode">🌙</button>
   <h1>Submit Jira Issue Summary, Description & Key</h1>
   <form id="jiraForm">
     <label for="key">Issue Key</label>
@@ -45,6 +144,37 @@
   <div class="result" id="result" style="display:none;"></div>
 
   <script>
+    // Night mode logic
+    const nightToggle = document.getElementById('nightToggle');
+    const NIGHT_MODE_KEY = 'nightModeEnabled';
+
+    function setNightMode(enabled) {
+      if (enabled) {
+        document.body.classList.add('night-mode');
+        nightToggle.innerText = '\u2600'; // Sun icon
+        nightToggle.title = 'Switch to day mode';
+        nightToggle.setAttribute('aria-label', 'Switch to day mode');
+      } else {
+        document.body.classList.remove('night-mode');
+        nightToggle.innerText = '\uD83C\uDF19'; // Moon icon
+        nightToggle.title = 'Switch to night mode';
+        nightToggle.setAttribute('aria-label', 'Switch to night mode');
+      }
+      localStorage.setItem(NIGHT_MODE_KEY, enabled ? '1' : '0');
+    }
+
+    // On load, set mode from localStorage
+    (function() {
+      const saved = localStorage.getItem(NIGHT_MODE_KEY);
+      setNightMode(saved === '1');
+    })();
+
+    nightToggle.addEventListener('click', function() {
+      const isNight = document.body.classList.contains('night-mode');
+      setNightMode(!isNight);
+    });
+
+    // Form submission logic
     document.getElementById('jiraForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       // Clear the result div when submit is clicked
