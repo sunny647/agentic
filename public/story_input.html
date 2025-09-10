@@ -72,6 +72,11 @@
     .header img {
       height: 48px;
       margin-right: 1.2em;
+      filter: none;
+      transition: filter var(--transition);
+    }
+    body.night-mode .header img {
+      filter: brightness(0) invert(1) grayscale(1) contrast(1.2);
     }
     .header-title {
       font-size: 2em;
@@ -276,7 +281,7 @@
 </head>
 <body>
   <div class="header">
-    <img src="/assets/sprintpilot-logo.svg" alt="SprintPilot Logo" />
+    <img src="/assets/sprintpilot-logo.svg" alt="SprintPilot Logo" id="logo-img" />
     <span class="header-title">SprintPilot Jira Issue Input</span>
   </div>
   <button class="night-toggle" id="nightToggle" title="Toggle night mode" aria-label="Toggle night mode">🌙</button>
