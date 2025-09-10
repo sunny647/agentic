@@ -20,6 +20,12 @@
       --input-bg-dark: #23272b;
       --input-border-light: #ccc;
       --input-border-dark: #444;
+      --header-bg: #fff;
+      --header-bg-dark: #23272b;
+      --footer-bg: #f6f8fa;
+      --footer-bg-dark: #181a1b;
+      --footer-text: #888;
+      --footer-text-dark: #bbb;
     }
     body {
       font-family: Arial, sans-serif;
@@ -27,6 +33,50 @@
       background: var(--background-light);
       color: var(--text-light);
       transition: background 0.3s, color 0.3s;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      background: var(--header-bg);
+      padding: 1em 2em 1em 2em;
+      border-radius: 8px 8px 0 0;
+      margin-bottom: 2em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      border-bottom: 1px solid #eee;
+      transition: background 0.3s;
+    }
+    .header img {
+      height: 40px;
+      margin-right: 1em;
+    }
+    .header-title {
+      font-size: 1.7em;
+      font-weight: bold;
+      letter-spacing: 1px;
+      color: var(--button-bg);
+    }
+    .footer {
+      background: var(--footer-bg);
+      color: var(--footer-text);
+      text-align: center;
+      padding: 1em 0;
+      border-radius: 0 0 8px 8px;
+      margin-top: 3em;
+      font-size: 0.95em;
+      transition: background 0.3s, color 0.3s;
+    }
+    /* Night mode styles */
+    body.night-mode {
+      background: var(--background-dark);
+      color: var(--text-dark);
+    }
+    body.night-mode .header {
+      background: var(--header-bg-dark);
+    }
+    body.night-mode .footer {
+      background: var(--footer-bg-dark);
+      color: var(--footer-text-dark);
     }
     label { display: block; margin-top: 1em; }
     textarea, input[type=text] {
@@ -78,11 +128,6 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    /* Night mode styles */
-    body.night-mode {
-      background: var(--background-dark);
-      color: var(--text-dark);
-    }
     body.night-mode form#jiraForm {
       background: var(--form-bg-dark);
     }
@@ -126,6 +171,10 @@
   </style>
 </head>
 <body>
+  <div class="header">
+    <img src="/assets/sprintpilot-logo.svg" alt="SprintPilot Logo" />
+    <span class="header-title">SprintPilot Jira Issue Input</span>
+  </div>
   <button class="night-toggle" id="nightToggle" title="Toggle night mode" aria-label="Toggle night mode">🌙</button>
   <h1>Submit Jira Issue Summary, Description & Key</h1>
   <form id="jiraForm">
@@ -142,6 +191,10 @@
   </form>
 
   <div class="result" id="result" style="display:none;"></div>
+
+  <div class="footer">
+    &copy; 2024 SprintPilot. All rights reserved.
+  </div>
 
   <script>
     // Night mode logic
