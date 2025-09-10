@@ -72,11 +72,17 @@
     .header img {
       height: 48px;
       margin-right: 1.2em;
-      filter: none;
-      transition: filter var(--transition);
+      filter: none !important;
+      background: transparent;
+      border-radius: 0;
+      box-shadow: none;
+      transition: none;
+      /* Ensure logo is always visible and not affected by mode */
+      display: block;
     }
+    /* Remove any filter in night mode for logo */
     body.night-mode .header img {
-      filter: brightness(0) invert(1) grayscale(1) contrast(1.2);
+      filter: none !important;
     }
     .header-title {
       font-size: 2em;
