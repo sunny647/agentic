@@ -3,68 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <title>Jira Issue Input - Agentic Supervisor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --background-light: #f6f8fa;
+      --primary: #6c47ff;
+      --primary-dark: #4b2fcf;
+      --accent: #00c2b2;
+      --background-light: #f7f9fb;
       --background-dark: #181a1b;
-      --form-bg-light: #d3d3d3;
+      --form-bg-light: #fff;
       --form-bg-dark: #23272b;
-      --text-light: #222;
-      --text-dark: #f6f8fa;
-      --button-bg: #800080;
-      --button-hover: #a020f0;
+      --text-light: #23272b;
+      --text-dark: #f7f9fb;
+      --button-bg: var(--primary);
+      --button-hover: var(--primary-dark);
       --button-text: #fff;
-      --result-bg-light: #f6f8fa;
+      --result-bg-light: #f7f9fb;
       --result-bg-dark: #23272b;
-      --input-bg-light: #fff;
+      --input-bg-light: #f7f9fb;
       --input-bg-dark: #23272b;
-      --input-border-light: #ccc;
+      --input-border-light: #d1d5db;
       --input-border-dark: #444;
       --header-bg: #fff;
       --header-bg-dark: #23272b;
-      --footer-bg: #f6f8fa;
+      --footer-bg: #f7f9fb;
       --footer-bg-dark: #181a1b;
       --footer-text: #888;
       --footer-text-dark: #bbb;
+      --shadow: 0 4px 24px rgba(108,71,255,0.08);
+      --radius: 14px;
+      --transition: 0.25s cubic-bezier(.4,0,.2,1);
+    }
+    html {
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
     }
     body {
-      font-family: Arial, sans-serif;
-      margin: 2em;
+      font-family: 'Inter', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
       background: var(--background-light);
       color: var(--text-light);
-      transition: background 0.3s, color 0.3s;
+      min-height: 100vh;
+      transition: background var(--transition), color var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .header {
       display: flex;
       align-items: center;
       justify-content: flex-start;
       background: var(--header-bg);
-      padding: 1em 2em 1em 2em;
-      border-radius: 8px 8px 0 0;
-      margin-bottom: 2em;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      padding: 2rem 2rem 1.5rem 2rem;
+      border-radius: var(--radius) var(--radius) 0 0;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow);
       border-bottom: 1px solid #eee;
-      transition: background 0.3s;
+      width: 100%;
+      max-width: 540px;
+      transition: background var(--transition);
     }
     .header img {
-      height: 40px;
-      margin-right: 1em;
+      height: 48px;
+      margin-right: 1.2em;
     }
     .header-title {
-      font-size: 1.7em;
-      font-weight: bold;
+      font-size: 2em;
+      font-weight: 700;
       letter-spacing: 1px;
-      color: var(--button-bg);
+      color: var(--primary);
     }
     .footer {
       background: var(--footer-bg);
       color: var(--footer-text);
       text-align: center;
-      padding: 1em 0;
-      border-radius: 0 0 8px 8px;
+      padding: 1.2em 0;
+      border-radius: 0 0 var(--radius) var(--radius);
       margin-top: 3em;
-      font-size: 0.95em;
-      transition: background 0.3s, color 0.3s;
+      font-size: 1em;
+      width: 100%;
+      max-width: 540px;
+      transition: background var(--transition), color var(--transition);
     }
     /* Night mode styles */
     body.night-mode {
@@ -78,48 +103,87 @@
       background: var(--footer-bg-dark);
       color: var(--footer-text-dark);
     }
-    label { display: block; margin-top: 1em; }
-    textarea, input[type=text] {
-      width: 100%;
-      padding: 0.5em;
-      margin-top: 0.5em;
-      background: var(--input-bg-light);
-      color: var(--text-light);
-      border: 1px solid var(--input-border-light);
-      border-radius: 4px;
-      transition: background 0.3s, color 0.3s, border 0.3s;
+    h1 {
+      font-size: 1.5em;
+      font-weight: 600;
+      margin-bottom: 1.5em;
+      color: var(--primary-dark);
+      letter-spacing: 0.5px;
+      text-align: center;
     }
     form#jiraForm {
       background: var(--form-bg-light);
-      padding: 2em;
-      border-radius: 8px;
-      transition: background 0.3s;
+      padding: 2.5em 2em 2em 2em;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 540px;
+      margin: 0 auto;
+      transition: background var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 1.2em;
     }
-    button {
+    label {
+      font-weight: 600;
+      margin-bottom: 0.3em;
+      color: var(--primary-dark);
+      letter-spacing: 0.2px;
+    }
+    textarea, input[type=text] {
+      width: 100%;
+      padding: 0.8em 1em;
+      background: var(--input-bg-light);
+      color: var(--text-light);
+      border: 1.5px solid var(--input-border-light);
+      border-radius: 7px;
+      font-size: 1em;
+      font-family: inherit;
+      margin-top: 0.2em;
+      margin-bottom: 0.2em;
+      transition: background var(--transition), color var(--transition), border var(--transition);
+      outline: none;
+    }
+    textarea:focus, input[type=text]:focus {
+      border-color: var(--primary);
+      background: #f0f4ff;
+    }
+    button[type=submit] {
       margin-top: 1em;
-      padding: 0.5em 2em;
+      padding: 0.8em 0;
       background: var(--button-bg);
       color: var(--button-text);
       border: none;
-      border-radius: 4px;
+      border-radius: 7px;
+      font-size: 1.1em;
+      font-weight: 700;
+      letter-spacing: 0.5px;
       cursor: pointer;
-      transition: background 0.3s;
+      box-shadow: 0 2px 8px rgba(108,71,255,0.10);
+      transition: background var(--transition);
     }
-    button:hover { background: var(--button-hover); }
+    button[type=submit]:hover, button[type=submit]:focus {
+      background: var(--button-hover);
+    }
     .result {
       margin-top: 2em;
       background: var(--result-bg-light);
-      padding: 1em;
-      border-radius: 4px;
+      padding: 1.2em 1em;
+      border-radius: 7px;
       min-height: 2em;
-      transition: background 0.3s, color 0.3s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      font-size: 1em;
+      width: 100%;
+      max-width: 540px;
+      transition: background var(--transition), color var(--transition);
+      word-break: break-word;
     }
     .spinner {
       display: inline-block;
       width: 32px;
       height: 32px;
-      border: 4px solid #ccc;
-      border-top: 4px solid #800080;
+      border: 4px solid #e0e0e0;
+      border-top: 4px solid var(--primary);
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 1em auto;
@@ -139,7 +203,11 @@
     body.night-mode input[type=text] {
       background: var(--input-bg-dark);
       color: var(--text-dark);
-      border: 1px solid var(--input-border-dark);
+      border: 1.5px solid var(--input-border-dark);
+    }
+    body.night-mode textarea:focus,
+    body.night-mode input[type=text]:focus {
+      background: #23213a;
     }
     /* Night mode toggle button */
     .night-toggle {
@@ -148,25 +216,61 @@
       right: 2em;
       z-index: 1000;
       background: var(--form-bg-light);
-      color: var(--button-bg);
+      color: var(--primary);
       border: none;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      font-size: 1.5em;
+      width: 44px;
+      height: 44px;
+      font-size: 1.6em;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: background 0.3s, color 0.3s;
+      transition: background var(--transition), color var(--transition);
       display: flex;
       align-items: center;
       justify-content: center;
     }
     body.night-mode .night-toggle {
       background: var(--form-bg-dark);
-      color: var(--button-hover);
+      color: var(--accent);
     }
     .night-toggle:focus {
-      outline: 2px solid var(--button-hover);
+      outline: 2px solid var(--primary);
+    }
+    /* Responsive design */
+    @media (max-width: 600px) {
+      .header, .footer, form#jiraForm, .result {
+        max-width: 98vw;
+        padding-left: 1em;
+        padding-right: 1em;
+      }
+      .header {
+        padding: 1.2em 1em 1em 1em;
+        margin-top: 1em;
+        margin-bottom: 1em;
+      }
+      form#jiraForm {
+        padding: 1.5em 1em 1em 1em;
+      }
+      .night-toggle {
+        top: 1em;
+        right: 1em;
+      }
+    }
+    /* Accessibility: focus ring for all inputs */
+    input:focus, textarea:focus, button:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    /* Visually hidden for screen readers */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      border: 0;
     }
   </style>
 </head>
@@ -177,15 +281,15 @@
   </div>
   <button class="night-toggle" id="nightToggle" title="Toggle night mode" aria-label="Toggle night mode">🌙</button>
   <h1>Submit Jira Issue Summary, Description & Key</h1>
-  <form id="jiraForm">
+  <form id="jiraForm" autocomplete="off">
     <label for="key">Issue Key</label>
-    <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required>
+    <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required aria-required="true" autocomplete="off">
 
     <label for="summary">Summary</label>
-    <input type="text" id="summary" name="summary" required>
+    <input type="text" id="summary" name="summary" required aria-required="true" autocomplete="off">
 
     <label for="description">Description</label>
-    <textarea id="description" name="description" rows="4" required></textarea>
+    <textarea id="description" name="description" rows="4" required aria-required="true" autocomplete="off"></textarea>
 
     <button type="submit">Submit</button>
   </form>
@@ -233,7 +337,7 @@
       // Clear the result div when submit is clicked
       const resultDiv = document.getElementById('result');
       resultDiv.style.display = 'block';
-      resultDiv.innerHTML = '<div class="spinner"></div>';
+      resultDiv.innerHTML = '<div class="spinner" role="status" aria-live="polite" aria-label="Loading"></div>';
 
       const key = document.getElementById('key').value;
       const summary = document.getElementById('summary').value;
