@@ -11,9 +11,12 @@ const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 app.use(express.json({ limit: '1mb' }));
 app.use(pinoHttp({ logger }));
 
-// Serve story_input.html from public directory
+// Serve static assets from public directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Serve story_input.html from public directory
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/story_input.html'));
 });
