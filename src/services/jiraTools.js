@@ -130,13 +130,27 @@ export const jiraTools = {
         return { error: 'Failed to fetch parent issue: ' + err.message };
       }
       try {
+        // Convert description to Atlassian Document Format (ADF)
+              const adfDescription = {
+                type: 'doc',
+                version: 1,
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [
+                      { type: 'text', text: description || 'Automated sub-task description' }
+                    ]
+                  }
+                ]
+              };
+              
         const subTask = await jira.addNewIssue({
           fields: {
               // Fetch all issue types for the project to get the sub-task type ID
               project: { key: projectKey },
               parent: { key: parentIssueId },
               summary,
-              description,
+              description: adfDescription,
               issuetype: { id: '10002' }
           }
         });
