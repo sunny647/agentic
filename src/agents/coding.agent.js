@@ -1,6 +1,8 @@
 // codingAgent.js
 import { getCodeAgent } from '../llm/models.js';
 import logger from '../logger.js';
+import { jiraTools } from '../services/jiraTools.js'; // Ensure this is imported
+
 import dotenv from 'dotenv';
 // --- Tool functions ---
 const { createBranch, commitFiles: githubCommitFiles, createPR } =
@@ -210,6 +212,18 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
     });
     prUrl = pr.url;
     logger.info({ prUrl }, 'PR created');
+    if (state.issueID) {
+    try {
+      logger.info({ issueId: state.issueID }, 'Adding prURL comment to Jira issue');
+      await jiraTools.addComment.execute({
+        issueId: state.issueID,
+        comment: 'PR created: ' + prUrl,
+      });
+      logger.info({ issueId: state.issueID }, 'prURL comment added to Jira successfully');
+    } catch (err) {
+      logger.error({ err, jiraId: state.issueID }, 'Failed to add prURL comment to Jira issue');
+    }
+  }
   } catch (err) {
     validationNotes.push(`PR creation failed: ${err.message}`);
     logger.error({ err }, 'PR creation failed');
