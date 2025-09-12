@@ -11,6 +11,8 @@ const router = Router();
  */
 router.post('/run', async (req, res) => {
   try {
+    console.log("Inside /run endpoint");
+    console.log("Request body:", req.body);
     logger.info({ body: req.body }, 'Received /run request with body');
     const requestId = uuid();
     // Validate that the request body is JSON and not empty
