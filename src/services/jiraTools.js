@@ -1,6 +1,8 @@
 import logger from '../logger.js';
 import JiraClient from 'jira-client';
 import axios from 'axios'; // For fetching images
+import { extractPlainTextFromAdf } from '../utils/adf-parser.js';
+
 
 const jira = new JiraClient({
   protocol: 'https',
@@ -26,8 +28,10 @@ const toAdfBulletList = (items) => ({
   }))
 });
 
+
 /**
  * Recursively extracts image URLs from a Jira ADF document.
+ * Handles both 'media' and 'mediaSingle' nodes.
  * @param {object} adfContent The ADF JSON content.
  * @returns {string[]} An array of image URLs.
  */
@@ -38,13 +42,23 @@ const extractImageUrlsFromAdf = (adfContent) => {
     return imageUrls;
   }
 
-  // Check if the current node is a media node with a URL
-  // This handles both inline Jira attachments and external media
+  // Case 1: Direct 'media' node (e.g., from an external embed)
   if (adfContent.type === 'media' && adfContent.attrs && adfContent.attrs.url) {
     imageUrls.push(adfContent.attrs.url);
   }
 
-  // Recursively search in 'content' array if present
+  // Case 2: 'mediaSingle' node which contains a 'media' node
+  if (adfContent.type === 'mediaSingle' && Array.isArray(adfContent.content)) {
+    for (const node of adfContent.content) {
+      if (node.type === 'media' && node.attrs && node.attrs.url) {
+        imageUrls.push(node.attrs.url);
+      }
+      // Also recursively check content of mediaSingle's children in case of deeper nesting (unlikely for images but good for robustness)
+      imageUrls.push(...extractImageUrlsFromAdf(node));
+    }
+  }
+
+  // Recursively search in 'content' array for other types of nodes
   if (Array.isArray(adfContent.content)) {
     for (const node of adfContent.content) {
       imageUrls.push(...extractImageUrlsFromAdf(node));
@@ -367,10 +381,10 @@ export const jiraTools = {
     }
   },
 
-  // Existing getIssue tool
+  // Updated getIssue tool to return a flattened, predictable structure
   getIssue: {
     name: 'getIssue',
-    description: 'Get details of a Jira issue',
+    description: 'Get details of a Jira issue, including rich description (ADF) and extracted image URLs.',
     parameters: {
       type: 'object',
       properties: { issueId: { type: 'string' } },
@@ -380,11 +394,28 @@ export const jiraTools = {
       logger.info({ issueId }, 'getIssue called');
       try {
         const issue = await jira.findIssue(issueId);
-        logger.info({ issue }, 'Fetched Jira issue');
-        return issue;
+        logger.info({ issue: { key: issue.key, summary: issue.fields.summary } }, 'Fetched Jira issue (summary)');
+
+        const descriptionAdf = issue.fields.description;
+        const imageUrls = extractImageUrlsFromAdf(descriptionAdf);
+        const storyText = descriptionAdf ? extractPlainTextFromAdf(descriptionAdf) : issue.fields.summary;
+        
+        logger.info({ issueId, imageUrlsCount: imageUrls.length, storyTextLength: storyText.length }, 'Extracted data from Jira description');
+
+        // FIX: Return a simplified object with the directly relevant properties
+        return {
+          issueKey: issue.key,
+          summary: issue.fields.summary,
+          storyText: storyText, // Simplified plain text description
+          descriptionAdf: descriptionAdf, // Full ADF for agents
+          extractedImageUrls: imageUrls, // Array of image URLs
+          // You can add other fields if needed, like status, assignee, etc.
+          status: issue.fields.status.name,
+          assignee: issue.fields.assignee ? issue.fields.assignee.displayName : 'Unassigned',
+        };
       } catch (err) {
-        logger.error({ issueId, error: err.message }, 'Failed to fetch Jira issue');
-        return { error: err.message };
+        logger.error({ issueId, errorMessage: err.message, errorStack: err.stack, errorResponse: err.response?.data || err.response }, 'Failed to fetch Jira issue or extract images');
+        return { error: `Failed to fetch Jira issue or extract images: ${JSON.stringify(err.message || err, Object.getOwnPropertyNames(err))}` };
       }
     }
   },

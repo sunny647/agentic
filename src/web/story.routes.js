@@ -62,7 +62,10 @@ router.post('/run', async (req, res) => {
         throw new Error(fetchedIssue.error);
       }
       resolvedDescriptionAdf = fetchedIssue.descriptionAdf;
+      console.log("Resolved Description ADF:", resolvedDescriptionAdf);
+
       const extractedUrls = fetchedIssue.extractedImageUrls || [];
+      console.log("Extracted Image URLs from fetched issue:", extractedUrls);
 
       // Fetch and convert images to Base64
       for (const url of extractedUrls) {
@@ -75,7 +78,6 @@ router.post('/run', async (req, res) => {
 
     console.log("Extracted Jira Key:", extractedJiraKey);
     console.log("Resolved Images:", resolvedImages);
-    console.log("Resolved Description ADF:", resolvedDescriptionAdf);
 
     logger.info({ storyText }, 'Starting pipeline with story');
     let output;
