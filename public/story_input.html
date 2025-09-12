@@ -109,6 +109,9 @@
     }
     body.night-mode .header {
       background: var(--header-bg-dark);
+      /* Remove border and shadow in night mode to eliminate white line */
+      border-bottom: none !important;
+      box-shadow: none !important;
     }
     body.night-mode .footer {
       background: var(--footer-bg-dark);
