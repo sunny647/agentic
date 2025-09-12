@@ -54,9 +54,9 @@ router.post('/run', async (req, res) => {
     console.log("Jira Images:", jiraImages);
     console.log("Extracted Description ADF:", descriptionAdf);
     // If we have a Jira key but no images or description ADF, try to fetch them
-    if (issueID && !jiraImages && !descriptionAdf) {
+    if (extractedJiraKey && !jiraImages && !descriptionAdf) {
       // If only issueID is provided, try to fetch fresh data
-      const fetchedIssue = await jiraTools.getIssue.execute({ issueId: issueID });
+      const fetchedIssue = await jiraTools.getIssue.execute({ issueId: extractedJiraKey });
       console.log("Fetched Issue:", fetchedIssue);
       if (fetchedIssue.error) {
         throw new Error(fetchedIssue.error);
@@ -66,7 +66,7 @@ router.post('/run', async (req, res) => {
 
       // Fetch and convert images to Base64
       for (const url of extractedUrls) {
-        const base64 = await fetchImageAsBase64(url, issueID);
+        const base64 = await fetchImageAsBase64(url, extractedJiraKey);
         if (base64) {
           resolvedImages.push({ url, base64, filename: url.split('/').pop() });
         }
