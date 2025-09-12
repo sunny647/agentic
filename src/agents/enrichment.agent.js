@@ -58,16 +58,9 @@ export async function enrichmentAgent(state) {
   if (state.issueID) {
     try {
       // IMPORTANT: Add the custom field update here
-      const CUSTOM_FIELD_ID_PROCESSED = "customfield_10075";
-
-      updateFields[CUSTOM_FIELD_ID_PROCESSED] = [{ "value": "Done" }]; // For a single-line text field
-      // If it's a "Short text field", use updateFields[CUSTOM_FIELD_ID_PROCESSED] = "Processed by SprintPilot";
-      // If it's a checkbox, use updateFields[CUSTOM_FIELD_ID_PROCESSED] = true;
-      console.log("Update fields:", updateFields);
-
       await jiraTools.updateIssueFields.execute({ // We need a new tool for generic field updates
         issueId: state.issueID,
-        fields: updateFields,
+        fields: {"customfield_10075": [{ "value": "Done" }]},
       });
       logger.info({ issueId: state.issueID }, 'Jira story update initiated, including automation status.');
 

@@ -1,5 +1,6 @@
 import logger from '../logger.js';
 import JiraClient from 'jira-client';
+import axios from 'axios'; // For fetching images
 
 const jira = new JiraClient({
   protocol: 'https',
@@ -24,6 +25,67 @@ const toAdfBulletList = (items) => ({
     content: [toAdfParagraph(item)]
   }))
 });
+
+/**
+ * Recursively extracts image URLs from a Jira ADF document.
+ * @param {object} adfContent The ADF JSON content.
+ * @returns {string[]} An array of image URLs.
+ */
+const extractImageUrlsFromAdf = (adfContent) => {
+  const imageUrls = [];
+
+  if (!adfContent || typeof adfContent !== 'object') {
+    return imageUrls;
+  }
+
+  // Check if the current node is a media node with a URL
+  // This handles both inline Jira attachments and external media
+  if (adfContent.type === 'media' && adfContent.attrs && adfContent.attrs.url) {
+    imageUrls.push(adfContent.attrs.url);
+  }
+
+  // Recursively search in 'content' array if present
+  if (Array.isArray(adfContent.content)) {
+    for (const node of adfContent.content) {
+      imageUrls.push(...extractImageUrlsFromAdf(node));
+    }
+  }
+
+  return imageUrls;
+};
+
+/**
+ * Fetches an image from a URL and returns its Base64 representation as a data URI.
+ * Handles Jira authentication for attachment URLs.
+ * @param {string} url The URL of the image.
+ * @param {string} [issueId] The Jira issue ID (needed for auth headers if it's an attachment URL).
+ * @returns {Promise<string|null>} Base64 data URI string of the image (e.g., "data:image/png;base64,..."), or null if failed.
+ */
+const fetchImageAsBase64 = async (url, issueId) => {
+  try {
+    const headers = {};
+    // Check if it's a Jira internal attachment URL that might require authentication
+    // Assuming Jira attachment URLs contain process.env.JIRA_HOST and specific paths
+    if (url.includes(process.env.JIRA_HOST) && (url.includes('/rest/api/3/attachment/') || url.includes('/secure/thumbnail/'))) {
+      const auth = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
+      headers['Authorization'] = `Basic ${auth}`;
+    }
+
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer', // Get as binary data
+      headers: headers,
+      // You might need to add a timeout
+      timeout: 10000, // 10 seconds timeout
+    });
+
+    const contentType = response.headers['content-type'] || 'application/octet-stream'; // Default if not provided
+    const base64 = Buffer.from(response.data).toString('base64');
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    logger.error({ url, issueId, errorMessage: error.message, errorCode: error.response?.status }, 'Failed to fetch image and convert to Base64');
+    return null;
+  }
+};
 
 export const jiraTools = {
   // Existing createSubTasks tool
