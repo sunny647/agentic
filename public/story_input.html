@@ -109,6 +109,11 @@
     }
     body.night-mode .header {
       background: var(--header-bg-dark);
+      /* Fix: Remove white line in night mode */
+      border-bottom: 1px solid #23272b !important;
+      /* Or use border-bottom: none; if you want no line at all */
+      /* border-bottom: none !important; */
+      box-shadow: var(--shadow);
     }
     body.night-mode .footer {
       background: var(--footer-bg-dark);
