@@ -2,8 +2,7 @@ import { Router } from 'express';
 import { runPipeline } from '../graph/pipeline.js';
 import { v4 as uuid } from 'uuid';
 import logger from '../logger.js';
-import { jiraTools, extractImageUrlsFromAdf, fetchImageAsBase64 } from '../services/jiraTools.js'; // Import new helpers
-import { extractPlainTextFromAdf } from '../utils/adf-parser.js'; // Assuming you create this helper
+import { jiraTools, fetchImageAsBase64 } from '../services/jiraTools.js'; // Import new helpers
 
 const router = Router();
 

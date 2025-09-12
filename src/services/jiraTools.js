@@ -61,7 +61,7 @@ const extractImageUrlsFromAdf = (adfContent) => {
  * @param {string} [issueId] The Jira issue ID (needed for auth headers if it's an attachment URL).
  * @returns {Promise<string|null>} Base64 data URI string of the image (e.g., "data:image/png;base64,..."), or null if failed.
  */
-const fetchImageAsBase64 = async (url, issueId) => {
+export const fetchImageAsBase64 = async (url, issueId) => {
   try {
     const headers = {};
     // Check if it's a Jira internal attachment URL that might require authentication
