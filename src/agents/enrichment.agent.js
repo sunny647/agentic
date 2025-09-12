@@ -58,9 +58,9 @@ export async function enrichmentAgent(state) {
   if (state.issueID) {
     try {
       // IMPORTANT: Add the custom field update here
-      const CUSTOM_FIELD_ID_PROCESSED = "SprintPilot Processed";
+      const CUSTOM_FIELD_ID_PROCESSED = "SprintPilotStatus";
 
-      updateFields[CUSTOM_FIELD_ID_PROCESSED] = [{ "value": "Yes" }]; // For a single-line text field
+      updateFields[CUSTOM_FIELD_ID_PROCESSED] = [{ "value": "Done" }]; // For a single-line text field
       // If it's a "Short text field", use updateFields[CUSTOM_FIELD_ID_PROCESSED] = "Processed by SprintPilot";
       // If it's a checkbox, use updateFields[CUSTOM_FIELD_ID_PROCESSED] = true;
       console.log("Update fields:", updateFields);
