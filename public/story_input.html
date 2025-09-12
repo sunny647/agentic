@@ -68,6 +68,8 @@
       width: 100%;
       max-width: 540px;
       transition: background var(--transition), border-bottom var(--transition);
+      position: relative;
+      z-index: 10;
     }
     .header img {
       height: 48px;
@@ -110,6 +112,7 @@
     body.night-mode .header {
       background: var(--header-bg-dark);
       border-bottom: 1px solid #23272b; /* match header bg, removes white line */
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
     }
     body.night-mode .footer {
       background: var(--footer-bg-dark);
@@ -283,6 +286,20 @@
       overflow: hidden;
       clip: rect(0,0,0,0);
       border: 0;
+    }
+    /* Fix for white line under header in night mode on all devices */
+    body.night-mode .header {
+      border-bottom: 1px solid var(--header-bg-dark) !important;
+      background: var(--header-bg-dark) !important;
+    }
+    /* Prevent margin collapse and ensure seamless header transition */
+    .header {
+      border-bottom: 1px solid #eee;
+      background-clip: padding-box;
+    }
+    body.night-mode .header {
+      border-bottom: 1px solid var(--header-bg-dark) !important;
+      background-clip: padding-box;
     }
   </style>
 </head>
