@@ -67,7 +67,7 @@
       border-bottom: 1px solid #eee;
       width: 100%;
       max-width: 540px;
-      transition: background var(--transition);
+      transition: background var(--transition), border-bottom var(--transition);
     }
     .header img {
       height: 48px;
@@ -109,6 +109,9 @@
     }
     body.night-mode .header {
       background: var(--header-bg-dark);
+      border-bottom: none;
+      /* Remove border in night mode to prevent white line */
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
     }
     body.night-mode .footer {
       background: var(--footer-bg-dark);
