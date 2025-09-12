@@ -2,12 +2,14 @@ import { Router } from 'express';
 import { runPipeline } from '../graph/pipeline.js';
 import { v4 as uuid } from 'uuid';
 import logger from '../logger.js';
+import { jiraTools, extractImageUrlsFromAdf, fetchImageAsBase64 } from './services/jiraTools.js'; // Import new helpers
+import { extractPlainTextFromAdf } from './utils/adf-parser.js'; // Assuming you create this helper
 
 const router = Router();
 
 /**
  * POST /api/story/run
- * body: { story?: string, jiraKey?: string, context?: { repo, projectKey, acceptanceCriteria } }
+ * body: { story?: string, jiraKey?: string, jiraImages?: string[], descriptionAdf?: object }
  */
 router.post('/run', async (req, res) => {
   try {
@@ -24,7 +26,7 @@ router.post('/run', async (req, res) => {
       logger.warn('Empty request body');
       return res.status(400).json({ error: 'Request body cannot be empty' });
     }
-    const { issue, story, jiraKey, context } = req.body || {};
+    const { issue, story, jiraKey, jiraImages, descriptionAdf } = req.body || {};
 
     let storyText;
     let extractedJiraKey = jiraKey;
@@ -47,6 +49,34 @@ router.post('/run', async (req, res) => {
       logger.warn('No story text or jiraKey provided');
       return res.status(400).json({ error: 'story or jiraKey required' });
     }
+
+    let resolvedImages = jiraImages || [];
+    let resolvedDescriptionAdf = descriptionAdf || null;
+    console.log("Jira Images:", jiraImages);
+    console.log("Extracted Description ADF:", descriptionAdf);
+    // If we have a Jira key but no images or description ADF, try to fetch them
+    if (issueID && !jiraImages && !descriptionAdf) {
+      // If only issueID is provided, try to fetch fresh data
+      const fetchedIssue = await jiraTools.getIssue.execute({ issueId: issueID });
+      console.log("Fetched Issue:", fetchedIssue);
+      if (fetchedIssue.error) {
+        throw new Error(fetchedIssue.error);
+      }
+      resolvedDescriptionAdf = fetchedIssue.descriptionAdf;
+      const extractedUrls = fetchedIssue.extractedImageUrls || [];
+
+      // Fetch and convert images to Base64
+      for (const url of extractedUrls) {
+        const base64 = await fetchImageAsBase64(url, issueID);
+        if (base64) {
+          resolvedImages.push({ url, base64, filename: url.split('/').pop() });
+        }
+      }
+    }
+
+    console.log("Extracted Jira Key:", extractedJiraKey);
+    console.log("Resolved Images:", resolvedImages);
+    console.log("Resolved Description ADF:", resolvedDescriptionAdf);
 
     logger.info({ storyText }, 'Starting pipeline with story');
     let output;
