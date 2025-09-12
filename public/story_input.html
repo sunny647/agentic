@@ -67,7 +67,7 @@
       border-bottom: 1px solid #eee;
       width: 100%;
       max-width: 540px;
-      transition: background var(--transition);
+      transition: background var(--transition), border-bottom-color var(--transition);
     }
     .header img {
       height: 48px;
@@ -109,6 +109,8 @@
     }
     body.night-mode .header {
       background: var(--header-bg-dark);
+      /* Fix: Remove white line by setting border-bottom to match header background */
+      border-bottom: 1px solid var(--header-bg-dark);
     }
     body.night-mode .footer {
       background: var(--footer-bg-dark);
