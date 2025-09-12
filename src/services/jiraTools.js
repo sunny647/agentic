@@ -163,6 +163,42 @@ export const jiraTools = {
     }
   },
 
+  // NEW TOOL: Generic update for issue fields by ID
+  updateIssueFields: {
+    name: 'updateIssueFields',
+    description: 'Update arbitrary fields of a Jira issue by their IDs or names.',
+    parameters: {
+      type: 'object',
+      properties: {
+        issueId: { type: 'string' },
+        fields: {
+          type: 'object',
+          description: 'An object where keys are Jira field IDs (e.g., "customfield_10001") or names, and values are the new field values.',
+        }
+      },
+      required: ['issueId', 'fields']
+    },
+    execute: async ({ issueId, fields }) => {
+      logger.info({ issueId, fields }, 'updateIssueFields called');
+      try {
+        // You might need to preprocess fields here if any require ADF conversion
+        // For custom fields like "text" or "select", simple strings/arrays usually work.
+        await jira.updateIssue(issueId, { fields });
+        logger.info({ issueId, fields }, 'Jira issue fields updated successfully');
+        return { success: true, issueId };
+      } catch (err) {
+        logger.error({
+          issueId, fields,
+          errorMessage: err && err.message ? err.message : null,
+          errorStack: err && err.stack ? err.stack : null,
+          errorResponse: err && err.response ? err.response : null,
+          errorRaw: err
+        }, 'Failed to update Jira issue fields');
+        return { error: `Failed to update Jira issue fields: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}` };
+      }
+    }
+  },
+
   // NEW: updateStory tool
   updateStory: {
     name: 'updateStory',

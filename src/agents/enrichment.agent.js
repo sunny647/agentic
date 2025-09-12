@@ -36,7 +36,7 @@ export async function enrichmentAgent(state) {
     },
   ];
 
- let enriched = {};
+  let enriched = {};
 
   try {
     // Invoke the model with structured output
@@ -56,6 +56,25 @@ export async function enrichmentAgent(state) {
   // Update Jira story (if id present)
   logger.info({ jiraId: state.issueID }, 'Checking for Jira ID to update');
   if (state.issueID) {
+    try {
+      // IMPORTANT: Add the custom field update here
+      const CUSTOM_FIELD_ID_PROCESSED = "SprintPilot Processed";
+
+      updateFields[CUSTOM_FIELD_ID_PROCESSED] = [{ "value": "Yes" }]; // For a single-line text field
+      // If it's a "Short text field", use updateFields[CUSTOM_FIELD_ID_PROCESSED] = "Processed by SprintPilot";
+      // If it's a checkbox, use updateFields[CUSTOM_FIELD_ID_PROCESSED] = true;
+      console.log("Update fields:", updateFields);
+
+      await jiraTools.updateIssueFields.execute({ // We need a new tool for generic field updates
+        issueId: state.issueID,
+        fields: updateFields,
+      });
+      logger.info({ issueId: state.issueID }, 'Jira story update initiated, including automation status.');
+
+    } catch (err) {
+      logger.error({ err, jiraId: state.issueID }, 'Jira story status update failed in enrichmentAgent');
+    }
+
     try {
       logger.info({ enriched }, 'Enriched Jira story');
       await jiraTools.updateStory.execute({ // Call the execute method of the tool
@@ -79,3 +98,4 @@ export async function enrichmentAgent(state) {
   logger.info({ nextState }, 'enrichmentAgent returning state');
   return nextState;
 }
+
