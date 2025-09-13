@@ -18,6 +18,7 @@ export function buildStoryFlow() {
     channels: {
       story: null,
       issueID: null,
+      jiraImages: null,
       enrichedStory: null,
       decomposition: null,
       codingTasks: null, // <-- ensure codingTasks are part of state

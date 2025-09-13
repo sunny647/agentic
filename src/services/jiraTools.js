@@ -28,59 +28,59 @@ const toAdfBulletList = (items) => ({
   }))
 });
 
-
 /**
- * Recursively extracts image URLs from a Jira ADF document.
- * Handles both 'media' and 'mediaSingle' nodes.
- * @param {object} adfContent The ADF JSON content.
- * @returns {string[]} An array of image URLs.
+ * Recursively extracts media references (URLs or Jira attachment filenames from ADF) from a Jira ADF document.
+ * This function is robust to various nesting levels and handles both
+ * external image URLs and internal Jira attachment filenames.
+ * @param {object} adfNode The current ADF JSON node to process.
+ * @returns {Array<{adfId?: string, adfType?: string, collection?: string, url?: string, filename?: string}>} An array of media references.
  */
-const extractImageUrlsFromAdf = (adfContent) => {
-  const imageUrls = [];
+const extractMediaReferencesFromAdf = (adfNode) => { // Renamed function for clarity
+  const mediaReferences = [];
 
-  if (!adfContent || typeof adfContent !== 'object') {
-    return imageUrls;
+  if (!adfNode || typeof adfNode !== 'object') {
+    return mediaReferences;
   }
 
-  // Case 1: Direct 'media' node (e.g., from an external embed)
-  if (adfContent.type === 'media' && adfContent.attrs && adfContent.attrs.url) {
-    imageUrls.push(adfContent.attrs.url);
-  }
+  // Check if the current node itself is a 'media' node
+  if (adfNode.type === 'media' && adfNode.attrs) {
+    const { id, type, collection, url, alt } = adfNode.attrs;
 
-  // Case 2: 'mediaSingle' node which contains a 'media' node
-  if (adfContent.type === 'mediaSingle' && Array.isArray(adfContent.content)) {
-    for (const node of adfContent.content) {
-      if (node.type === 'media' && node.attrs && node.attrs.url) {
-        imageUrls.push(node.attrs.url);
-      }
-      // Also recursively check content of mediaSingle's children in case of deeper nesting (unlikely for images but good for robustness)
-      imageUrls.push(...extractImageUrlsFromAdf(node));
+    if (type === 'file') {
+      // This is an internal Jira attachment. We need its 'alt' (filename) for matching.
+      // The 'id' here is a UUID for media API, not the attachment ID.
+      mediaReferences.push({ adfId: id, adfType: type, collection: collection, filename: alt });
+      logger.debug({ adfMediaId: id, adfMediaFilename: alt }, 'Found Jira attachment reference in ADF (by filename)');
+    } else if (url) {
+      // This is an external media embed, return its direct URL
+      mediaReferences.push({ url, adfType: type, filename: alt });
+      logger.debug({ adfMediaUrl: url }, 'Found external media URL in ADF');
     }
   }
 
-  // Recursively search in 'content' array for other types of nodes
-  if (Array.isArray(adfContent.content)) {
-    for (const node of adfContent.content) {
-      imageUrls.push(...extractImageUrlsFromAdf(node));
+  // If the current node has a 'content' array, recursively process each child
+  if (Array.isArray(adfNode.content)) {
+    for (const childNode of adfNode.content) {
+      mediaReferences.push(...extractMediaReferencesFromAdf(childNode));
     }
   }
 
-  return imageUrls;
+  return mediaReferences;
 };
+
 
 /**
  * Fetches an image from a URL and returns its Base64 representation as a data URI.
  * Handles Jira authentication for attachment URLs.
  * @param {string} url The URL of the image.
- * @param {string} [issueId] The Jira issue ID (needed for auth headers if it's an attachment URL).
+ * @param {string} [issueKey] The Jira issue key (for logging context).
  * @returns {Promise<string|null>} Base64 data URI string of the image (e.g., "data:image/png;base64,..."), or null if failed.
  */
-export const fetchImageAsBase64 = async (url, issueId) => {
+export const fetchImageAsBase64 = async (url, issueKey) => { // issueId renamed to issueKey for consistency
   try {
+    console.log('Fetching image from URL in fetchImageAsBase64:', url); // Keep this console.log for direct feedback
     const headers = {};
-    // Check if it's a Jira internal attachment URL that might require authentication
-    // Assuming Jira attachment URLs contain process.env.JIRA_HOST and specific paths
-    if (url.includes(process.env.JIRA_HOST) && (url.includes('/rest/api/3/attachment/') || url.includes('/secure/thumbnail/'))) {
+    if (url.includes(process.env.JIRA_HOST) && url.includes('/rest/api/3/attachment/')) {
       const auth = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
       headers['Authorization'] = `Basic ${auth}`;
     }
@@ -88,15 +88,16 @@ export const fetchImageAsBase64 = async (url, issueId) => {
     const response = await axios.get(url, {
       responseType: 'arraybuffer', // Get as binary data
       headers: headers,
-      // You might need to add a timeout
       timeout: 10000, // 10 seconds timeout
     });
 
     const contentType = response.headers['content-type'] || 'application/octet-stream'; // Default if not provided
     const base64 = Buffer.from(response.data).toString('base64');
+    console.log('Base64 Length:', base64.length);
     return `data:${contentType};base64,${base64}`;
   } catch (error) {
-    logger.error({ url, issueId, errorMessage: error.message, errorCode: error.response?.status }, 'Failed to fetch image and convert to Base64');
+    console.log('Error fetching image:', error);
+    logger.error({ url, issueKey, errorMessage: error.message, errorCode: error.response?.status, errorData: error.response?.data?.toString() }, 'Failed to fetch image and convert to Base64');
     return null;
   }
 };
@@ -397,19 +398,39 @@ export const jiraTools = {
         logger.info({ issue: { key: issue.key, summary: issue.fields.summary } }, 'Fetched Jira issue (summary)');
 
         const descriptionAdf = issue.fields.description;
-        const imageUrls = extractImageUrlsFromAdf(descriptionAdf);
-        const storyText = descriptionAdf ? extractPlainTextFromAdf(descriptionAdf) : issue.fields.summary;
+        const adfMediaRefs = extractMediaReferencesFromAdf(descriptionAdf); // Get references from ADF
         
-        logger.info({ issueId, imageUrlsCount: imageUrls.length, storyTextLength: storyText.length }, 'Extracted data from Jira description');
+        // --- Correlate ADF media references with actual attachments from issue.fields.attachment ---
+        const attachmentsInIssue = issue.fields.attachment || [];
+        const finalImageUrls = []; // This will store the actual fetchable URLs {url, filename}
 
-        // FIX: Return a simplified object with the directly relevant properties
+        for (const ref of adfMediaRefs) {
+          if (ref.url) { // It's an external URL reference
+            finalImageUrls.push({ url: ref.url, filename: ref.filename || ref.url.split('/').pop() });
+          } else if (ref.adfType === 'file' && ref.filename) { // It's a Jira attachment reference by filename
+            // Find the matching attachment in issue.fields.attachment array using filename
+            const matchingAttachment = attachmentsInIssue.find(att =>
+                att.filename === ref.filename
+            );
+
+            if (matchingAttachment && matchingAttachment.content) {
+              finalImageUrls.push({ url: matchingAttachment.content, filename: matchingAttachment.filename });
+              logger.debug({ adfFilename: ref.filename, matchingAttId: matchingAttachment.id, contentUrl: matchingAttachment.content }, 'Matched ADF filename to Jira attachment content URL.');
+            } else {
+              logger.warn({ adfMediaRef: ref, attachmentsInIssue: attachmentsInIssue.map(a => ({ id: a.id, filename: a.filename })), issueId }, 'Could not find a matching attachment content URL for ADF media filename.');
+            }
+          }
+        }
+
+        const storyText = descriptionAdf ? extractPlainTextFromAdf(descriptionAdf, finalImageUrls) : issue.fields.summary;
+
+        logger.info({ issueId, extractedImageUrlsCount: finalImageUrls.length, storyTextLength: storyText.length, hasDescriptionAdf: !!descriptionAdf }, 'Extracted data from Jira description');
         return {
           issueKey: issue.key,
           summary: issue.fields.summary,
-          storyText: storyText, // Simplified plain text description
-          descriptionAdf: descriptionAdf, // Full ADF for agents
-          extractedImageUrls: imageUrls, // Array of image URLs
-          // You can add other fields if needed, like status, assignee, etc.
+          storyText: storyText,
+          descriptionAdf: descriptionAdf,
+          extractedImageUrls: finalImageUrls, // Now an array of {url, filename} objects
           status: issue.fields.status.name,
           assignee: issue.fields.assignee ? issue.fields.assignee.displayName : 'Unassigned',
         };

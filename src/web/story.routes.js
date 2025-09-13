@@ -51,15 +51,13 @@ router.post('/run', async (req, res) => {
 
     let resolvedImages = jiraImages || [];
     let resolvedDescriptionAdf = descriptionAdf || null;
-    console.log("Jira Images:", jiraImages);
-    console.log("Extracted Description ADF:", descriptionAdf);
     // If we have a Jira key but no images or description ADF, try to fetch them
     if (extractedJiraKey && !jiraImages && !descriptionAdf) {
       // If only issueID is provided, try to fetch fresh data
       const fetchedIssue = await jiraTools.getIssue.execute({ issueId: extractedJiraKey });
       console.log("Fetched Issue:", fetchedIssue);
       if (fetchedIssue.error) {
-        throw new Error(fetchedIssue.error);
+      throw new Error(fetchedIssue.error);
       }
       resolvedDescriptionAdf = fetchedIssue.descriptionAdf;
       console.log("Resolved Description ADF:", resolvedDescriptionAdf);
@@ -68,21 +66,19 @@ router.post('/run', async (req, res) => {
       console.log("Extracted Image URLs from fetched issue:", extractedUrls);
 
       // Fetch and convert images to Base64
-      for (const url of extractedUrls) {
+      for (const { url, filename } of extractedUrls) {
         const base64 = await fetchImageAsBase64(url, extractedJiraKey);
         if (base64) {
-          resolvedImages.push({ url, base64, filename: url.split('/').pop() });
+          resolvedImages.push({ url, base64, filename });
         }
       }
     }
 
-    console.log("Extracted Jira Key:", extractedJiraKey);
-    console.log("Resolved Images:", resolvedImages);
-
     logger.info({ storyText }, 'Starting pipeline with story');
     let output;
     try {
-      output = await runPipeline({ requestId, story: storyText, issueID: extractedJiraKey });
+      return res.status(500).json({ error: pipelineErr.message, stack: pipelineErr.stack });
+      output = await runPipeline({ requestId, story: storyText, issueID: extractedJiraKey, jiraImages: resolvedImages });
     } catch (pipelineErr) {
       logger.error({ pipelineErr }, 'Pipeline execution error');
       return res.status(500).json({ error: pipelineErr.message, stack: pipelineErr.stack });

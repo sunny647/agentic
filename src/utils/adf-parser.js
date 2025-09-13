@@ -4,7 +4,7 @@
  * @param {object} adf The ADF JSON content.
  * @returns {string} The extracted plain text.
  */
-export const extractPlainTextFromAdf = (adf) => {
+export const extractPlainTextFromAdf = (adf, finalImageUrls) => {
     if (!adf || typeof adf !== 'object' || !Array.isArray(adf.content)) {
         return '';
     }
@@ -27,15 +27,20 @@ export const extractPlainTextFromAdf = (adf) => {
         } else if (node.type === 'bulletList' && Array.isArray(node.content)) {
             for (const listItem of node.content) {
                 if (listItem.type === 'listItem' && Array.isArray(listItem.content)) {
-                    text += '- ' + extractPlainTextFromAdf({ content: listItem.content }) + '\n';
+                    text += '- ' + extractPlainTextFromAdf({ content: listItem.content }, finalImageUrls) + '\n';
                 }
             }
         } else if (node.type === 'mediaSingle' && Array.isArray(node.content)) {
              // For media, add a placeholder or URL if available
              const mediaNode = node.content.find(c => c.type === 'media');
-             if (mediaNode && mediaNode.attrs && mediaNode.attrs.url) {
-                 text += `![Image: ${mediaNode.attrs.id || 'attachment'}](${mediaNode.attrs.url})\n`;
-             } else {
+             const match = finalImageUrls.find(img => img.filename === mediaNode.attrs.alt);
+            if (mediaNode && mediaNode.attrs && mediaNode.attrs.alt) {
+                if (match) {
+                    text += `\n![Image: ${mediaNode.attrs.alt}, url: (${match.url})]\n`;
+                } else {
+                    text += `![Image: ${mediaNode.attrs.alt || 'attachment'}]\n`;
+                }
+            } else {
                  text += '[Image inserted]\n';
              }
         }
