@@ -7,32 +7,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #6c47ff;
-      --primary-dark: #4b2fcf;
+      --primary: #a259ff;
+      --primary-dark: #6c47ff;
       --accent: #00c2b2;
-      --background-light: #f7f9fb;
-      --background-dark: #181a1b;
-      --form-bg-light: #fff;
-      --form-bg-dark: #23272b;
-      --text-light: #23272b;
+      --background-dark: #18122B;
+      --background-darker: #120f1e;
+      --form-bg-dark: #23203a;
       --text-dark: #f7f9fb;
+      --text-muted: #b8b8d1;
       --button-bg: var(--primary);
       --button-hover: var(--primary-dark);
       --button-text: #fff;
-      --result-bg-light: #f7f9fb;
-      --result-bg-dark: #23272b;
-      --input-bg-light: #f7f9fb;
-      --input-bg-dark: #23272b;
-      --input-border-light: #d1d5db;
-      --input-border-dark: #444;
-      --header-bg: #fff;
-      --header-bg-dark: #23272b;
-      --footer-bg: #f7f9fb;
-      --footer-bg-dark: #181a1b;
-      --footer-text: #888;
+      --result-bg-dark: #23203a;
+      --input-bg-dark: #18122B;
+      --input-border-dark: #3a2e5c;
+      --header-bg-dark: #23203a;
+      --footer-bg-dark: #18122B;
       --footer-text-dark: #bbb;
-      --shadow: 0 4px 24px rgba(108,71,255,0.08);
-      --radius: 14px;
+      --shadow: 0 4px 24px rgba(108,71,255,0.10);
+      --radius: 18px;
       --transition: 0.25s cubic-bezier(.4,0,.2,1);
     }
     html {
@@ -46,8 +39,8 @@
       font-family: 'Inter', Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background: var(--background-light);
-      color: var(--text-light);
+      background: var(--background-dark);
+      color: var(--text-dark);
       min-height: 100vh;
       transition: background var(--transition), color var(--transition);
       display: flex;
@@ -58,13 +51,13 @@
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      background: var(--header-bg);
+      background: var(--header-bg-dark);
       padding: 2rem 2rem 1.5rem 2rem;
       border-radius: var(--radius) var(--radius) 0 0;
       margin-top: 2rem;
       margin-bottom: 2rem;
       box-shadow: var(--shadow);
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid #2d2347;
       width: 100%;
       max-width: 540px;
       transition: background var(--transition), border-bottom var(--transition);
@@ -77,12 +70,7 @@
       border-radius: 0;
       box-shadow: none;
       transition: none;
-      /* Ensure logo is always visible and not affected by mode */
       display: block;
-    }
-    /* Remove any filter in night mode for logo */
-    body.night-mode .header img {
-      filter: none !important;
     }
     .header-title {
       font-size: 2em;
@@ -91,8 +79,8 @@
       color: var(--primary);
     }
     .footer {
-      background: var(--footer-bg);
-      color: var(--footer-text);
+      background: var(--footer-bg-dark);
+      color: var(--footer-text-dark);
       text-align: center;
       padding: 1.2em 0;
       border-radius: 0 0 var(--radius) var(--radius);
@@ -101,19 +89,6 @@
       width: 100%;
       max-width: 540px;
       transition: background var(--transition), color var(--transition);
-    }
-    /* Night mode styles */
-    body.night-mode {
-      background: var(--background-dark);
-      color: var(--text-dark);
-    }
-    body.night-mode .header {
-      background: var(--header-bg-dark);
-      border-bottom: 1px solid #23272b; /* match header bg, removes white line */
-    }
-    body.night-mode .footer {
-      background: var(--footer-bg-dark);
-      color: var(--footer-text-dark);
     }
     h1 {
       font-size: 1.5em;
@@ -124,7 +99,7 @@
       text-align: center;
     }
     form#jiraForm {
-      background: var(--form-bg-light);
+      background: var(--form-bg-dark);
       padding: 2.5em 2em 2em 2em;
       border-radius: var(--radius);
       box-shadow: var(--shadow);
@@ -134,54 +109,79 @@
       transition: background var(--transition);
       display: flex;
       flex-direction: column;
-      gap: 1.2em;
+      gap: 1.5em;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3em;
     }
     label {
       font-weight: 600;
-      margin-bottom: 0.3em;
       color: var(--primary-dark);
       letter-spacing: 0.2px;
+      margin-bottom: 0.1em;
+      font-size: 1.05em;
+    }
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      background: var(--input-bg-dark);
+      border: 1.5px solid var(--input-border-dark);
+      border-radius: 8px;
+      transition: border var(--transition), background var(--transition);
+    }
+    .input-wrapper:focus-within {
+      border-color: var(--primary);
+      background: #221a3a;
     }
     textarea, input[type=text] {
       width: 100%;
       padding: 0.8em 1em;
-      background: var(--input-bg-light);
-      color: var(--text-light);
-      border: 1.5px solid var(--input-border-light);
-      border-radius: 7px;
+      background: transparent;
+      color: var(--text-dark);
+      border: none;
+      border-radius: 8px;
       font-size: 1em;
       font-family: inherit;
-      margin-top: 0.2em;
-      margin-bottom: 0.2em;
-      transition: background var(--transition), color var(--transition), border var(--transition);
       outline: none;
+      resize: none;
+      transition: background var(--transition), color var(--transition);
     }
     textarea:focus, input[type=text]:focus {
-      border-color: var(--primary);
-      background: #f0f4ff;
+      background: #221a3a;
+    }
+    .input-icon {
+      color: var(--primary);
+      font-size: 1.2em;
+      margin-left: 0.8em;
+      margin-right: 0.2em;
+      opacity: 0.7;
     }
     button[type=submit] {
       margin-top: 1em;
-      padding: 0.8em 0;
-      background: var(--button-bg);
+      padding: 0.9em 0;
+      background: linear-gradient(90deg, var(--primary-dark) 0%, var(--primary) 100%);
       color: var(--button-text);
       border: none;
-      border-radius: 7px;
-      font-size: 1.1em;
+      border-radius: 8px;
+      font-size: 1.15em;
       font-weight: 700;
       letter-spacing: 0.5px;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(108,71,255,0.10);
-      transition: background var(--transition);
+      transition: background var(--transition), box-shadow var(--transition);
+      outline: none;
     }
     button[type=submit]:hover, button[type=submit]:focus {
-      background: var(--button-hover);
+      background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
+      box-shadow: 0 4px 16px rgba(162,89,255,0.18);
     }
     .result {
       margin-top: 2em;
-      background: var(--result-bg-light);
+      background: var(--result-bg-dark);
       padding: 1.2em 1em;
-      border-radius: 7px;
+      border-radius: 8px;
       min-height: 2em;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       font-size: 1em;
@@ -189,12 +189,13 @@
       max-width: 540px;
       transition: background var(--transition), color var(--transition);
       word-break: break-word;
+      color: var(--text-dark);
     }
     .spinner {
       display: inline-block;
       width: 32px;
       height: 32px;
-      border: 4px solid #e0e0e0;
+      border: 4px solid #2d2347;
       border-top: 4px solid var(--primary);
       border-radius: 50%;
       animation: spin 1s linear infinite;
@@ -204,30 +205,13 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    body.night-mode form#jiraForm {
-      background: var(--form-bg-dark);
-    }
-    body.night-mode .result {
-      background: var(--result-bg-dark);
-      color: var(--text-dark);
-    }
-    body.night-mode textarea,
-    body.night-mode input[type=text] {
-      background: var(--input-bg-dark);
-      color: var(--text-dark);
-      border: 1.5px solid var(--input-border-dark);
-    }
-    body.night-mode textarea:focus,
-    body.night-mode input[type=text]:focus {
-      background: #23213a;
-    }
     /* Night mode toggle button */
     .night-toggle {
       position: fixed;
       top: 1.5em;
       right: 2em;
       z-index: 1000;
-      background: var(--form-bg-light);
+      background: var(--form-bg-dark);
       color: var(--primary);
       border: none;
       border-radius: 50%;
@@ -240,10 +224,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-    body.night-mode .night-toggle {
-      background: var(--form-bg-dark);
-      color: var(--accent);
     }
     .night-toggle:focus {
       outline: 2px solid var(--primary);
@@ -284,6 +264,15 @@
       clip: rect(0,0,0,0);
       border: 0;
     }
+    /* Modern scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      background: #23203a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2d2347;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -294,29 +283,37 @@
   <button class="night-toggle" id="nightToggle" title="Toggle night mode" aria-label="Toggle night mode">🌙</button>
   <h1>Submit Story for Agentic Software Development Life Cycle</h1>
   <form id="jiraForm" autocomplete="off">
-    <label for="key">Issue Key</label>
-    <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required aria-required="true" autocomplete="off">
-
-    <label for="summary">Summary</label>
-    <input type="text" id="summary" name="summary" required aria-required="true" autocomplete="off">
-
-    <label for="description">Description</label>
-    <textarea id="description" name="description" rows="4" required aria-required="true" autocomplete="off"></textarea>
-
+    <div class="form-group">
+      <label for="key">Issue Key</label>
+      <div class="input-wrapper">
+        <span class="input-icon">#</span>
+        <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required aria-required="true" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="summary">Summary</label>
+      <div class="input-wrapper">
+        <span class="input-icon">📝</span>
+        <input type="text" id="summary" name="summary" required aria-required="true" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="description">Description</label>
+      <div class="input-wrapper">
+        <span class="input-icon">💬</span>
+        <textarea id="description" name="description" rows="4" required aria-required="true" autocomplete="off"></textarea>
+      </div>
+    </div>
     <button type="submit">Submit</button>
   </form>
-
   <div class="result" id="result" style="display:none;"></div>
-
   <div class="footer">
     &copy; 2024 SprintPilot. All rights reserved.
   </div>
-
   <script>
     // Night mode logic
     const nightToggle = document.getElementById('nightToggle');
     const NIGHT_MODE_KEY = 'nightModeEnabled';
-
     function setNightMode(enabled) {
       if (enabled) {
         document.body.classList.add('night-mode');
@@ -331,18 +328,14 @@
       }
       localStorage.setItem(NIGHT_MODE_KEY, enabled ? '1' : '0');
     }
-
-    // On load, set mode from localStorage
     (function() {
       const saved = localStorage.getItem(NIGHT_MODE_KEY);
       setNightMode(saved === '1');
     })();
-
     nightToggle.addEventListener('click', function() {
       const isNight = document.body.classList.contains('night-mode');
       setNightMode(!isNight);
     });
-
     // Form submission logic
     document.getElementById('jiraForm').addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -350,11 +343,9 @@
       const resultDiv = document.getElementById('result');
       resultDiv.style.display = 'block';
       resultDiv.innerHTML = '<div class="spinner" role="status" aria-live="polite" aria-label="Loading"></div>';
-
       const key = document.getElementById('key').value;
       const summary = document.getElementById('summary').value;
       const description = document.getElementById('description').value;
-
       // Construct minimal Jira-like payload
       const payload = {
         issue: {
@@ -365,7 +356,6 @@
           }
         }
       };
-
       try {
         const res = await fetch('/api/story/run', {
           method: 'POST',
@@ -375,7 +365,7 @@
         const data = await res.json();
         resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
       } catch (err) {
-        resultDiv.innerHTML = '<span style="color:red;">Error loading result.</span>';
+        resultDiv.innerHTML = '<span style="color:#ff6bcb;">Error loading result.</span>';
       }
     });
   </script>
