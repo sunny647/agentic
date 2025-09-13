@@ -22,26 +22,50 @@ const structuredEnrichmentModel =
 export async function enrichmentAgent(state) {
   logger.info({ state }, 'enrichmentAgent called');
 
-  const prompt = [
-    {
-      role: 'system',
-      content:
-        'You are a business analyst. Enrich the user story by clarifying scope, assumptions, and dependencies. ' +
+  const systemPromptText ='You are a business analyst. Enrich the user story by clarifying scope, assumptions, and dependencies. ' +
         'Pay close attention to any provided images for UI requirements and visual context. Add the images in the in the enriched output.' +
         'Also expand the acceptance criteria into a detailed list that covers edge cases and risks. ' +
-        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`
-    },
-    {
-      role: 'user',
-      content: state.story,
-    },
+        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`;
+
+  // Construct the user message content array (for multimodal input)
+  const userContentParts = [
+    { type: 'text', text: state.story }, // The primary text of the story
+  ];
+  // Add images to the user's prompt if available
+  if (state.jiraImages && state.jiraImages.length > 0) {
+    userContentParts.push({
+        type: 'text',
+        text: '\n\n**Attached UI/Visual References:**\n' // Intro text for images
+    });
+    state.jiraImages.forEach((img, index) => {
+
+      userContentParts.push({
+        type: 'image_url',
+        image_url: { url: img.base64 } // Use base64 data URI
+      });
+      userContentParts.push({
+          type: 'text',
+          text: `\n(Image ${index + 1}: [ImageName: ${img.filename}, ImageURL: ${img.url}])\n` // Label for each image
+      });
+    });
+    userContentParts.push({
+        type: 'text',
+        text: '\nConsider these images carefully for detailed UI requirements and context when enriching the story and expanding acceptance criteria.'
+    });
+  }
+
+  console.log('User content parts for enrichment:', userContentParts); // Debug log
+
+  const messages = [
+    { role: 'system', content: systemPromptText },
+    { role: 'user', content: userContentParts }, // Pass the array of content parts
   ];
 
   let enriched = {};
 
   try {
     // Invoke the model with structured output
-    enriched = await structuredEnrichmentModel.invoke(prompt);
+    enriched = await structuredEnrichmentModel.invoke(messages);
     logger.info({ enriched }, 'Enriched story (structured output)');
 
   } catch (error) {
@@ -68,7 +92,7 @@ export async function enrichmentAgent(state) {
     } catch (err) {
       logger.error({ err, jiraId: state.issueID }, 'Jira story status update failed in enrichmentAgent');
     }
-
+console.log('Enriched data before Jira update:', enriched.description); // Debug log
     try {
       logger.info({ enriched }, 'Enriched Jira story');
       await jiraTools.updateStory.execute({ // Call the execute method of the tool

@@ -77,7 +77,6 @@ router.post('/run', async (req, res) => {
     logger.info({ storyText }, 'Starting pipeline with story');
     let output;
     try {
-      return res.status(500).json({ error: pipelineErr.message, stack: pipelineErr.stack });
       output = await runPipeline({ requestId, story: storyText, issueID: extractedJiraKey, jiraImages: resolvedImages });
     } catch (pipelineErr) {
       logger.error({ pipelineErr }, 'Pipeline execution error');
