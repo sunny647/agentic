@@ -20,17 +20,3 @@ export async function queryDB(query, params = []) {
     client.release();
   }
 }
-
-// Migration helper: create stories table if not exists
-export async function ensureStoriesTable() {
-  const createTable = `
-    CREATE TABLE IF NOT EXISTS stories (
-      id SERIAL PRIMARY KEY,
-      key VARCHAR(32) NOT NULL,
-      summary TEXT NOT NULL,
-      description TEXT NOT NULL,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW()
-    );
-  `;
-  await queryDB(createTable);
-}
