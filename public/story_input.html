@@ -369,12 +369,12 @@
         </div>
         <div class="jira-field">
           <label for="summary">Summary</label>
-          <input type="text" id="summary" name="summary" autocomplete="off">
+          <input type="text" id="summary" name="summary" required aria-required="true" autocomplete="off">
         </div>
       </div>
       <div class="jira-field jira-description">
         <label for="description">Description</label>
-        <textarea id="description" name="description" rows="3" autocomplete="off"></textarea>
+        <textarea id="description" name="description" rows="3" required aria-required="true" autocomplete="off"></textarea>
       </div>
       <button type="submit" class="jira-submit-btn">Submit</button>
     </form>
@@ -451,9 +451,20 @@
       resultDiv.style.display = 'block';
       resultDiv.innerHTML = '<div class="spinner" role="status" aria-live="polite" aria-label="Loading"></div>';
 
-      const key = document.getElementById('key').value;
-      const summary = document.getElementById('summary').value;
-      const description = document.getElementById('description').value;
+      const key = document.getElementById('key').value.trim();
+      const summary = document.getElementById('summary').value.trim();
+      const description = document.getElementById('description').value.trim();
+
+      // Client-side validation
+      if (!key || !summary || !description) {
+        resultDiv.innerHTML = '<div class="error-message">All fields are required.</div>';
+        return;
+      }
+      // Issue Key format validation (e.g. SCRUM-1)
+      if (!/^([A-Z][A-Z0-9]+-\d+)$/.test(key)) {
+        resultDiv.innerHTML = '<div class="error-message">Issue Key must be in the format ABC-123.</div>';
+        return;
+      }
 
       // Construct minimal Jira-like payload
       const payload = {
