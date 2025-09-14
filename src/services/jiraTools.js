@@ -345,7 +345,7 @@ export const jiraTools = {
           for (const img of jiraImages) {
             // Convert base64 to buffer
             const buffer = Buffer.from(img.base64, 'base64');
-            await jira.addAttachment(issueId, buffer, img.filename);
+            await jira.addAttachmentOnIssue(issueId, buffer, img.filename);
           }
         }
 
