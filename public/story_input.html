@@ -22,6 +22,14 @@
       --glow: 0 0 32px 0 #a78bfa55, 0 0 0 4px #a78bfa22;
       --radius: 22px;
       --transition: 0.25s cubic-bezier(.4,0,.2,1);
+      --log-bg: #23243a;
+      --log-border: #393a4a;
+      --decision-bg: #23213a;
+      --decision-border: #a78bfa;
+      --decision-title: #a78bfa;
+      --log-title: #bdbdfc;
+      --log-text: #e0e0ff;
+      --error: #ff6b6b;
     }
     html {
       box-sizing: border-box;
@@ -215,6 +223,58 @@
       word-break: break-word;
       display: none;
     }
+    .supervisor-decision {
+      background: var(--decision-bg);
+      border: 1.5px solid var(--decision-border);
+      border-radius: 10px;
+      margin-bottom: 1.2em;
+      padding: 1em 1.2em 1em 1.2em;
+      box-shadow: 0 0 0 2px #a78bfa22;
+    }
+    .supervisor-decision-title {
+      color: var(--decision-title);
+      font-size: 1.13em;
+      font-weight: 700;
+      margin-bottom: 0.5em;
+      letter-spacing: 0.1px;
+    }
+    .supervisor-decision-content {
+      color: #fff;
+      font-size: 1.05em;
+      font-weight: 500;
+      margin-bottom: 0.2em;
+      white-space: pre-line;
+    }
+    .logs-section {
+      background: var(--log-bg);
+      border: 1.5px solid var(--log-border);
+      border-radius: 10px;
+      padding: 1em 1.2em 1em 1.2em;
+      margin-bottom: 0.5em;
+      box-shadow: 0 0 0 2px #393a4a22;
+    }
+    .logs-title {
+      color: var(--log-title);
+      font-size: 1.08em;
+      font-weight: 600;
+      margin-bottom: 0.5em;
+      letter-spacing: 0.1px;
+    }
+    .logs-list {
+      color: var(--log-text);
+      font-size: 0.98em;
+      line-height: 1.5;
+      margin: 0;
+      padding-left: 1.2em;
+      list-style: disc inside;
+      word-break: break-word;
+    }
+    .error-message {
+      color: var(--error);
+      font-weight: 600;
+      font-size: 1.08em;
+      margin-bottom: 0.7em;
+    }
     .spinner {
       display: inline-block;
       width: 32px;
@@ -302,6 +362,41 @@
     &copy; 2024 SprintPilot. All rights reserved.
   </div>
   <script>
+    // Helper: safely get nested property
+    function get(obj, path, fallback = undefined) {
+      return path.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : fallback), obj);
+    }
+
+    // Format logs as a list
+    function renderLogs(logs) {
+      if (!Array.isArray(logs) || logs.length === 0) return '<div class="logs-title">No logs available.</div>';
+      return `
+        <div class="logs-title">Pipeline Logs</div>
+        <ul class="logs-list">
+          ${logs.map(log => `<li>${log}</li>`).join('')}
+        </ul>
+      `;
+    }
+
+    // Format supervisor decision
+    function renderSupervisorDecision(decision) {
+      if (!decision) return '';
+      return `
+        <div class="supervisor-decision-title">Supervisor Decision</div>
+        <div class="supervisor-decision-content">${decision}</div>
+      `;
+    }
+
+    // Validate API response structure
+    function validateResponse(data) {
+      if (!data || typeof data !== 'object') return false;
+      if (!('output' in data)) return false;
+      // Accept supervisorDecision and logs at either root or output level
+      const output = data.output;
+      if (!output) return false;
+      return true;
+    }
+
     // Form submission logic
     document.getElementById('jiraForm').addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -332,9 +427,31 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        if (!validateResponse(data)) {
+          resultDiv.innerHTML = '<div class="error-message">Unexpected API response structure.</div>' +
+            '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+          return;
+        }
+        // Extract supervisorDecision and logs (try both root and output)
+        const output = data.output || {};
+        const supervisorDecision = get(output, 'supervisorDecision') || get(data, 'supervisorDecision');
+        const logs = get(output, 'logs') || get(data, 'logs');
+        let html = '';
+        if (supervisorDecision) {
+          html += `<div class="supervisor-decision">${renderSupervisorDecision(supervisorDecision)}</div>`;
+        }
+        if (logs) {
+          html += `<div class="logs-section">${renderLogs(logs)}</div>`;
+        }
+        if (!supervisorDecision && !logs) {
+          html += '<div class="logs-title">No supervisor decision or logs found in response.</div>';
+        }
+        // Always allow user to expand/copy full JSON for debugging
+        html += '<details style="margin-top:1em;"><summary style="cursor:pointer;color:#a78bfa;font-weight:600;">Show Raw JSON</summary><pre style="margin-top:0.7em;">' +
+          JSON.stringify(data, null, 2) + '</pre></details>';
+        resultDiv.innerHTML = html;
       } catch (err) {
-        resultDiv.innerHTML = '<span style="color:#ff6b6b;">Error loading result.</span>';
+        resultDiv.innerHTML = '<div class="error-message">Error loading result.</div>';
       }
     });
   </script>
