@@ -289,11 +289,23 @@ export const jiraTools = {
           type: 'array',
           items: { type: 'string' },
           description: 'An array of strings, where each string is an acceptance criterion.'
-        }
+        },
+        jiraImages: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            filename: { type: 'string' },
+            base64: { type: 'string' }
+          },
+          required: ['filename', 'base64']
+        },
+        description: 'Array of images to upload as attachments'
+      }
       },
       required: ['issueId'] // description and acceptanceCriteria can be optional for update
     },
-    execute: async ({ issueId, description, acceptanceCriteria }) => {
+    execute: async ({ issueId, description, acceptanceCriteria, jiraImages }) => {
       logger.info({ issueId, description, acceptanceCriteria }, 'updateStory called');
       try {
         const adfContent = [];
@@ -328,6 +340,15 @@ export const jiraTools = {
 
         await jira.updateIssue(issueId, updateFields);
         logger.info({ issueId }, 'Jira story updated successfully');
+        // 2. Upload images if provided
+        if (jiraImages && Array.isArray(jiraImages) && jiraImages.length > 0) {
+          for (const img of jiraImages) {
+            // Convert base64 to buffer
+            const buffer = Buffer.from(img.base64, 'base64');
+            await jira.addAttachment(issueId, buffer, img.filename);
+          }
+        }
+
         return { success: true, issueId };
       } catch (err) {
         logger.error({

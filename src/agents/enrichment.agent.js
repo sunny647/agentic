@@ -96,6 +96,7 @@ export async function enrichmentAgent(state) {
         issueId: state.issueID,
         description: enriched.description,
         acceptanceCriteria: enriched.acceptanceCriteria,
+        jiraImages: state.jiraImages || [], // Pass images for attachment
       });
     } catch (err) {
       logger.error({ err }, 'Jira update failed');
