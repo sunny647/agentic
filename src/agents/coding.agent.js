@@ -1,19 +1,34 @@
-// codingAgent.js
+// src/agents/coding.agent.js
 import { getCodeAgent } from '../llm/models.js';
 import logger from '../logger.js';
-import { jiraTools } from '../services/jiraTools.js'; // Ensure this is imported
-
 import dotenv from 'dotenv';
-// --- Tool functions ---
-const { createBranch, commitFiles: githubCommitFiles, createPR } =
-    (await import('../services/githubTools.js')).githubTools;
+import { z } from "zod";
+import { jiraTools } from '../services/jiraTools.js';
+import { getPrompt, CodingOutputSchema } from '../prompts/prompt.manager.js'; // NEW: Import getPrompt and Schema
+
 
 dotenv.config();
 
+// IMPORTANT: Create a model instance configured for structured output
+// Note: getCodeAgent returns a createReactAgent, which is not directly compatible with .withStructuredOutput.
+// We'll revert this agent to manual JSON parsing with Zod validation of the string output.
+const FileActionSchema = z.enum(["create", "modify", "delete"]).describe("The action to perform on the file.");
+const FileChangeSchema = z.object({
+  action: FileActionSchema,
+  content: z.string().optional().describe("The full content of the file. Required for 'create' and 'modify' actions. Not applicable for 'delete'.")
+}).describe("Details of a file change, including action and content.");
+
+const CodingOutputSchema = z.object({
+  files: z.record(z.string().describe("File path relative to the repository root (e.g., 'src/components/MyComponent.js')."), FileChangeSchema)
+           .describe("An object where keys are file paths and values are objects describing the change.")
+}).describe("A JSON object representing all proposed file changes.");
+
+
 export async function codingAgent(state) {
-  const codeAgent = await getCodeAgent();
   logger.info({ state }, 'codingAgent called');
   let validationNotes = [];
+
+  const codeAgent = await getCodeAgent(); // This returns a createReactAgent
 
   const storyKey = state.storyKey || `task-${Date.now()}`;
   const branchName = `feature/${storyKey}-${Math.random().toString(36).substr(2, 5)}`;
@@ -23,162 +38,80 @@ export async function codingAgent(state) {
   state.repoOwner = state.repoOwner || process.env.GITHUB_REPO_OWNER;
   state.repoName = state.repoName || process.env.GITHUB_REPO_NAME;
 
-  const tasks = [
+  const decompositionTasks = [
     ...(state.decomposition?.feTasks || []),
     ...(state.decomposition?.beTasks || []),
     ...(state.decomposition?.sharedTasks || []),
   ];
 
-  if (!state.codingTasks || state.codingTasks.length === 0) {
-    logger.warn('codingAgent: no codingTasks found, skipping code generation');
+  if (!decompositionTasks || decompositionTasks.length === 0) {
+    logger.warn('codingAgent: no decomposition tasks found, skipping code generation');
     return {
       ...state,
       logs: [...(state.logs || []), 'coding:skipped:no_tasks'],
     };
   }
 
-  const system = `You are a senior full-stack engineer.
-You will be given a Jira story and must propose code changes.
+  // Use the prompt manager to get the messages.
+  // getPrompt for codingAgent will return the system prompt content as a string
+  // and the user content as a complex array.
+  const codingPromptMessages = getPrompt('codingAgent', state);
 
-You have access to a tool:
-- getFiles(paths): returns the latest content of multiple files from the repo. Pass a list of file paths as 'paths'.
+  let files; // Declare variable
+  let rawAgentOutput = ""; // To store the raw output for error logging
 
-Rules:
-- For modifying existing files, you can call getFiles(paths) first, passing all needed file paths in a single call.
-- When responding with changes, return the FULL file content, not diffs.
-- Respond strictly in JSON:
-  {
-    "files": {
-      "src/example.js": { "action": "modify", "content": "..." },
-      "src/newFile.js": { "action": "create", "content": "..." },
-      "src/oldFile.js": { "action": "delete" }
-    }
-  }
-- Do not add explanations outside JSON.
-- DO not make more than 5 tool calls to getFiles per request, you can request for multiple files in one call.
-- Do not request directories (like "src/" or "src/web/"), only concrete file paths.
-- If a file does not exist (response null), proceed without it instead of retrying.
-- Stop requesting more files once you have enough context to generate changes.
-
-Project context: ${JSON.stringify(state.contextJson)}
-Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
-`;
-
-  logger.info({ system }, 'codingAgent system prompt');
-
-  const userContentParts = [
-    { type: 'text', text: state.enrichedStory || state.story },
-    { type: 'text', text: `\nTasks:\n- ${tasks.map(t => t.task || t).join('\n- ')}` }
-  ];
-  if (state.jiraImages && state.jiraImages.length > 0) {
-    userContentParts.push({ type: 'text', text: '\n\n**Attached UI/Visual References:**\n' });
-    state.jiraImages.forEach((img, index) => {
-      userContentParts.push({ type: 'image_url', image_url: { url: img.base64 } });
-      userContentParts.push({ type: 'text', text: `\n(Image ${index + 1}: [ImageName: ${img.filename}, ImageURL: ${img.url}])\n` });
-    });
-    userContentParts.push({ type: 'text', text: '\nConsider these images carefully for detailed UI requirements and context when generating code.' });
-  }
-  
-  const resp = await codeAgent.invoke({
-    messages: [
-      { role: "system", content: [{ type: "text", text: system }] },
-      { role: "user", content: userContentParts },
-    ],
-  });
-
-  logger.info({ response: JSON.stringify(resp) }, 'Coding Agent response');
-
-    // --- Normalize output ---
-  logger.info({ resp }, "Raw AI response");
-  let finalResponse = "";
-
-  if (Array.isArray(resp?.messages)) {
-    logger.info({ messages: resp.messages }, "AI response messages array detected");
-
-    // Find the first message with a non-empty content property
-    let foundContent = null;
-    for (const m of resp.messages) {
-      if (m && m.content && m.response_metadata && m.response_metadata.finish_reason === "stop" && ((typeof m.content === "string" && m.content.trim()) || (Array.isArray(m.content) && m.content.length) || (typeof m.content === "object" && m.content.text))) {
-        foundContent = m.content;
-        logger.info({ foundContent }, "Found message with non-empty content");
-        break;
-      }
-    }
-
-    if (foundContent) {
-      if (typeof foundContent === "string" && foundContent.trim()) {
-        finalResponse = foundContent.trim();
-      } else if (Array.isArray(foundContent)) {
-        finalResponse = foundContent.map(c => (typeof c === "string" ? c : c.text || "")).join("\n").trim();
-      } else if (foundContent.text) {
-        finalResponse = foundContent.text.trim();
-      }
-    }
-  }
-
-  logger.info({ finalResponse }, "Normalized AI response after messages array check");
-
-  // Fallbacks
-  if (!finalResponse && typeof resp?.content === "string") {
-    finalResponse = resp.content.trim();
-  } else if (!finalResponse && resp?.output) {
-    finalResponse = resp.output.trim();
-  }
-
-  logger.info({ finalResponse }, "Normalized AI response");
-
-  // --- Extract strict JSON ---
-  let files = { files: {} };
   try {
-    let candidate = finalResponse;
-    logger.info({ candidate }, "Candidate response for JSON extraction");
+    // Invoke the createReactAgent. Its response will be a string in the 'output' field.
+    // The createReactAgent's prompt (from models.js) already contains the system prompt.
+    // We only need to pass the user's part of the prompt.
+    const agentResponse = await codeAgent.invoke({
+      input: codingPromptMessages[1].content, // Pass the user content array as 'input'
+      // The system prompt should already be configured within getCodeAgent's prompt
+      // You might need to adjust getCodeAgent if you want to dynamically update system prompt per invocation.
+    });
 
-    // Find the first {...} block
-    const match = candidate.match(/\{[\s\S]*\}/);
-    if (!match) {
-      throw new Error("No JSON object found in AI output");
-    }
+    logger.info({ agentResponse }, 'Coding Agent raw response');
+    rawAgentOutput = agentResponse.output;
 
-    let jsonString = match[0];
+    // Clean up markdown fences and parse the JSON string
+    let cleanedJsonString = rawAgentOutput.replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
+    
+    // Attempt to parse and validate the JSON
+    const parsedJson = JSON.parse(cleanedJsonString);
+    files = CodingOutputSchema.parse(parsedJson); // Validate against Zod schema
 
-    // If it looks like escaped JSON, clean it once
-    if (jsonString.includes('\"')) {
-      logger.info("Escaped JSON detected, unescaping");
-      jsonString = jsonString
-        .replace(/\"/g, '"')
-        .replace(/\\n/g, '\n')
-        .replace(/\\/g, '\\');
-    }
+    logger.info({ files }, 'Coding Agent structured output (parsed and validated)');
 
-    // Sanitize: replace literal newlines and carriage returns inside quoted values with \n
-    jsonString = jsonString.replace(/("(?:[^"\\]|\\.)*")/g, (m) => m.replace(/\n/g, '\\n').replace(/\r/g, ''));
-
-    const parsed = JSON.parse(jsonString);
-    logger.info({ parsed }, "Parsed JSON object from AI output");
-
-    files = parsed.files ? parsed : { files: parsed }; // ensure files key
-  } catch (err) {
-    logger.error({ finalResponse, err }, "Failed to parse AI JSON output");
+  } catch (error) {
+    logger.error({ error, rawAgentOutput }, 'Coding agent failed to produce valid structured JSON or encountered an error. Falling back to no changes.');
+    validationNotes.push(`Code generation failed: ${error.message || 'Unknown error'}. Manual code review required.`);
+    files = { files: {} }; // Fallback to an empty files object
   }
 
-
-  logger.info({ files }, 'Parsed code changes');
-
+  // --- Simplify commit file list preparation ---
   let commitFileList = [];
   for (const [path, change] of Object.entries(files.files || {})) {
-    logger.info({ path, action: change.action }, `Processing ${path}`);
+    logger.info({ path, action: change.action }, `Processing file for commit: ${path}`);
     if (change.action === 'delete') {
       commitFileList.push({ path, action: 'delete' });
     } else if (change.action === 'modify' || change.action === 'create') {
+      if (change.content === undefined || change.content === null) {
+        logger.warn(`File ${path} has action '${change.action}' but no content provided. Skipping this file.`);
+        validationNotes.push(`Warning: File ${path} for action '${change.action}' had no content. Skipping.`);
+        continue;
+      }
       commitFileList.push({ path, action: change.action, content: change.content });
+    } else {
+      logger.warn(`File ${path} has unknown action '${change.action}'. Skipping this file.`);
+      validationNotes.push(`Warning: File ${path} had an unknown action '${change.action}'. Skipping.`);
     }
   }
 
   logger.info({ commitFileList }, 'Prepared commit file list');
 
   if (!commitFileList.length) {
-    logger.warn('codingAgent: No code changes to commit, skipping commit and PR creation');
-    validationNotes.push('No code changes detected, commit and PR steps skipped.');
+    logger.warn('codingAgent: No valid code changes to commit, skipping commit and PR creation');
+    validationNotes.push('No valid code changes detected, commit and PR steps skipped.');
     return {
       ...state,
       codePatches: files,
@@ -202,7 +135,7 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
       owner: state.repoOwner,
       repo: state.repoName,
       branch: branchName,
-      message: `Auto-generated code for ${state.storyKey || state.issueID || 'story'}`,
+      message: `feat(${storyKey}): Auto-generated code for ${state.issueID || 'story'}`,
       files: commitFileList,
     });
     logger.info({ branchName }, 'Files committed');
@@ -216,12 +149,12 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
     const pr = await createPR({
       owner: state.repoOwner,
       repo: state.repoName,
-      title: `Auto PR for ${state.storyKey || state.issueID || 'story'}`,
-      body: state.enrichedStory || state.story || '',
+      title: `feat(${storyKey}): Implement ${state.issueID || 'story'}`,
+      body: `**Jira Story:** [${state.issueID || 'N/A'}](${process.env.JIRA_HOST}/browse/${state.issueID})\n\n**Description:**\n${state.enrichedStory || state.story || 'N/A'}\n\n**Decomposed Tasks Implemented:**\n${decompositionTasks.map(t => `- [${t.type}] ${t.task}`).join('\n')}\n\nThis PR was automatically generated by the Agentic Supervisor.`,
       head: branchName,
       base: state.baseBranch,
     });
-    prUrl = pr.url;
+    prUrl = pr.html_url;
     logger.info({ prUrl }, 'PR created');
     if (state.issueID) {
     try {
