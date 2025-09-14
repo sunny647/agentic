@@ -11,14 +11,15 @@
       --primary-dark: #6c47ff;
       --accent: #00c2b2;
       --background-dark: #18192a;
-      --form-bg-dark: #23243a;
+      --form-bg-dark: #181a23;
       --text-dark: #f7f9fb;
       --input-bg-dark: #23243a;
       --input-border-dark: #393a4a;
       --button-bg: #a78bfa;
       --button-hover: #6c47ff;
       --button-text: #fff;
-      --shadow: 0 4px 32px 0 rgba(108,71,255,0.18);
+      --shadow: 0 0 32px 0 #a78bfa33, 0 2px 8px #0002;
+      --glow: 0 0 32px 0 #a78bfa55, 0 0 0 4px #a78bfa22;
       --radius: 22px;
       --transition: 0.25s cubic-bezier(.4,0,.2,1);
     }
@@ -45,7 +46,7 @@
     .jira-card {
       background: var(--form-bg-dark);
       border-radius: var(--radius);
-      box-shadow: 0 0 32px 0 rgba(167,139,250,0.18), 0 2px 8px rgba(0,0,0,0.10);
+      box-shadow: var(--glow);
       padding: 2.8em 2.5em 2.2em 2.5em;
       margin-top: 4.5em;
       max-width: 720px;
@@ -57,7 +58,10 @@
       position: relative;
       z-index: 2;
       border: 1.5px solid rgba(167,139,250,0.10);
-      transition: max-width var(--transition);
+      transition: max-width var(--transition), box-shadow var(--transition), background var(--transition);
+    }
+    .jira-card:focus-within, .jira-card:hover {
+      box-shadow: 0 0 48px 0 #a78bfa55, 0 0 0 6px #a78bfa22;
     }
     .jira-header {
       display: flex;
