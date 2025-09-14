@@ -54,8 +54,6 @@ export async function enrichmentAgent(state) {
     });
   }
 
-  console.log('User content parts for enrichment:', userContentParts); // Debug log
-
   const messages = [
     { role: 'system', content: systemPromptText },
     { role: 'user', content: userContentParts }, // Pass the array of content parts
@@ -92,7 +90,6 @@ export async function enrichmentAgent(state) {
     } catch (err) {
       logger.error({ err, jiraId: state.issueID }, 'Jira story status update failed in enrichmentAgent');
     }
-console.log('Enriched data before Jira update:', enriched.description); // Debug log
     try {
       logger.info({ enriched }, 'Enriched Jira story');
       await jiraTools.updateStory.execute({ // Call the execute method of the tool
