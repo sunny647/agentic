@@ -30,6 +30,12 @@
       --log-title: #bdbdfc;
       --log-text: #e0e0ff;
       --error: #ff6b6b;
+      --font-size-xs: 0.92rem;
+      --font-size-sm: 1.02rem;
+      --font-size-md: 1.13rem;
+      --font-size-lg: 1.28rem;
+      --font-size-xl: 1.6rem;
+      --font-size-xxl: 2rem;
     }
     html {
       box-sizing: border-box;
@@ -50,6 +56,7 @@
       align-items: center;
       justify-content: flex-start;
       transition: background var(--transition), color var(--transition);
+      font-size: var(--font-size-sm);
     }
     .jira-card {
       background: var(--form-bg-dark);
@@ -67,6 +74,7 @@
       z-index: 2;
       border: 1.5px solid rgba(167,139,250,0.10);
       transition: max-width var(--transition), box-shadow var(--transition), background var(--transition);
+      font-size: var(--font-size-md);
     }
     .jira-card:focus-within, .jira-card:hover {
       box-shadow: 0 0 48px 0 #a78bfa55, 0 0 0 6px #a78bfa22;
@@ -81,7 +89,7 @@
       background: #6c47ff;
       color: #fff;
       font-weight: 700;
-      font-size: 1.6em;
+      font-size: var(--font-size-xl);
       border-radius: 12px;
       width: 44px;
       height: 44px;
@@ -92,14 +100,14 @@
       flex-shrink: 0;
     }
     .jira-title {
-      font-size: 2em;
+      font-size: var(--font-size-xl);
       font-weight: 700;
       color: #fff;
       letter-spacing: 0.2px;
       line-height: 1.1;
     }
     .jira-subtitle {
-      font-size: 1.1em;
+      font-size: var(--font-size-md);
       font-weight: 400;
       color: #bdbdfc;
       margin-left: 0.5em;
@@ -107,7 +115,7 @@
       line-height: 1.1;
     }
     .jira-main-title {
-      font-size: 1.35em;
+      font-size: var(--font-size-lg);
       font-weight: 700;
       color: #fff;
       margin: 1.1em 0 1.7em 0;
@@ -132,7 +140,7 @@
     }
     label {
       font-weight: 600;
-      font-size: 1.01em;
+      font-size: var(--font-size-sm);
       color: #fff;
       margin-bottom: 0.3em;
       letter-spacing: 0.1px;
@@ -142,7 +150,7 @@
       color: #fff;
       border: 1.5px solid #393a4a;
       border-radius: 10px;
-      font-size: 1.08em;
+      font-size: var(--font-size-md);
       font-family: inherit;
       padding: 0.7em 1em;
       margin-bottom: 0.1em;
@@ -160,14 +168,14 @@
     input[type=text]::placeholder {
       color: #bdbdfc;
       opacity: 1;
-      font-size: 0.98em;
+      font-size: var(--font-size-xs);
       font-weight: 400;
     }
     textarea {
       min-height: 64px;
       resize: vertical;
       margin-bottom: 0.2em;
-      font-size: 1.08em;
+      font-size: var(--font-size-md);
       border-radius: 10px;
       border: 1.5px solid var(--primary);
       background: #18192a;
@@ -186,7 +194,7 @@
       color: var(--button-text);
       border: none;
       border-radius: 10px;
-      font-size: 1.18em;
+      font-size: var(--font-size-lg);
       font-weight: 700;
       letter-spacing: 0.5px;
       cursor: pointer;
@@ -202,7 +210,7 @@
     .jira-footer {
       margin-top: 2.5em;
       color: #bdbdfc;
-      font-size: 1.05em;
+      font-size: var(--font-size-sm);
       text-align: center;
       opacity: 0.85;
       letter-spacing: 0.1px;
@@ -220,7 +228,7 @@
       border-radius: 10px;
       min-height: 2em;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      font-size: 1em;
+      font-size: var(--font-size-md);
       width: 100%;
       word-break: break-word;
       display: none;
@@ -235,14 +243,14 @@
     }
     .supervisor-decision-title {
       color: var(--decision-title);
-      font-size: 1.13em;
+      font-size: var(--font-size-md);
       font-weight: 700;
       margin-bottom: 0.5em;
       letter-spacing: 0.1px;
     }
     .supervisor-decision-content {
       color: #fff;
-      font-size: 1.05em;
+      font-size: var(--font-size-sm);
       font-weight: 500;
       margin-bottom: 0.2em;
       white-space: pre-line;
@@ -257,14 +265,14 @@
     }
     .logs-title {
       color: var(--log-title);
-      font-size: 1.08em;
+      font-size: var(--font-size-sm);
       font-weight: 600;
       margin-bottom: 0.5em;
       letter-spacing: 0.1px;
     }
     .logs-list {
       color: var(--log-text);
-      font-size: 0.98em;
+      font-size: var(--font-size-xs);
       line-height: 1.5;
       margin: 0;
       padding-left: 1.2em;
@@ -274,7 +282,7 @@
     .error-message {
       color: var(--error);
       font-weight: 600;
-      font-size: 1.08em;
+      font-size: var(--font-size-md);
       margin-bottom: 0.7em;
     }
     .spinner {
