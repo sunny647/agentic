@@ -103,11 +103,13 @@
       display: flex;
       gap: 1em;
       margin-bottom: 1.2em;
+      width: 100%;
     }
     .jira-field {
       flex: 1 1 0;
       display: flex;
       flex-direction: column;
+      min-width: 0;
     }
     label {
       font-weight: 600;
@@ -128,6 +130,9 @@
       transition: background var(--transition), color var(--transition), border var(--transition);
       outline: none;
       box-shadow: none;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
     }
     input[type=text]:focus, textarea:focus {
       border-color: var(--primary);
