@@ -3,6 +3,8 @@ import { runPipeline } from '../graph/pipeline.js';
 import { v4 as uuid } from 'uuid';
 import logger from '../logger.js';
 import { jiraTools, fetchImageAsBase64 } from '../services/jiraTools.js'; // Import new helpers
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -144,6 +146,30 @@ router.post('/webhook', async (req, res) => {
     logger.error({ err }, 'Webhook processing error');
     const errorMessage = err && err.message ? err.message : 'Unknown server error';
     res.status(500).json({ error: errorMessage, stack: err && err.stack ? err.stack : undefined });
+  }
+});
+
+// ──────────────────────────────────────────────
+// GET /api/story/logs/:requestId
+// Returns pipeline logs for a given requestId
+// ──────────────────────────────────────────────
+router.get('/logs/:requestId', async (req, res) => {
+  const { requestId } = req.params;
+  if (!requestId) {
+    return res.status(400).json({ error: 'Missing requestId' });
+  }
+  // Try to find logs in pipeline-logs.txt or a per-request log file
+  const logFile = path.join(process.cwd(), 'pipeline-logs.txt');
+  try {
+    if (!fs.existsSync(logFile)) {
+      return res.status(404).json({ error: 'No logs found' });
+    }
+    // For demo: just return the full log file (in real, filter by requestId)
+    const logs = fs.readFileSync(logFile, 'utf8');
+    res.json({ requestId, logs });
+  } catch (err) {
+    logger.error({ err }, 'Error reading pipeline logs');
+    res.status(500).json({ error: 'Failed to read logs' });
   }
 });
 
