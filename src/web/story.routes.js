@@ -32,7 +32,12 @@ router.post('/run', async (req, res) => {
     if (issue && issue.fields) {
       const { summary, description } = issue.fields;
       const key = issue.key;
-      storyText = `${summary ? summary + ': ' : ''}${description || ''}`.trim();
+      // Allow summary and description to be optional
+      if (summary || description) {
+        storyText = `${summary ? summary + ': ' : ''}${description || ''}`.trim();
+      } else {
+        storyText = '';
+      }
       if (key) {
         extractedJiraKey = key;
       }
@@ -40,13 +45,18 @@ router.post('/run', async (req, res) => {
       storyText = typeof story === 'object' && story?.description ? story.description : story;
     }
     // If you want, fetch Jira here (left minimal to keep demo self-contained)
-    if (!storyText && extractedJiraKey) {
+    if ((!storyText || storyText === '') && extractedJiraKey) {
       storyText = `Jira ${extractedJiraKey}: (Jira integration disabled in demo).`;
     }
 
+    if (!extractedJiraKey) {
+      logger.warn('No issue key provided');
+      return res.status(400).json({ error: 'issue key is required' });
+    }
     if (!storyText) {
-      logger.warn('No story text or jiraKey provided');
-      return res.status(400).json({ error: 'story or jiraKey required' });
+      logger.warn('No story text provided, using fallback.');
+      // storyText will be empty string if both summary and description are missing, but we allow this now
+      // Optionally, you could set a default/fallback here if needed
     }
 
     let resolvedImages = jiraImages || [];
@@ -111,11 +121,16 @@ router.post('/webhook', async (req, res) => {
     }
     const { summary, description } = issue.fields;
     const key = issue.key;
-    const storyText = `${summary ? summary + ': ' : ''}${description || ''}`.trim();
-    if (!storyText) {
-      logger.warn('Webhook issue missing summary/description');
-      return res.status(400).json({ error: 'Webhook issue missing summary/description' });
+    // Allow summary and description to be optional
+    let storyText = '';
+    if (summary || description) {
+      storyText = `${summary ? summary + ': ' : ''}${description || ''}`.trim();
     }
+    if (!key) {
+      logger.warn('Webhook missing issue key');
+      return res.status(400).json({ error: 'Webhook missing issue key' });
+    }
+    // If both summary and description are missing, storyText will be empty string, which is now allowed
     const requestId = uuid();
     let output;
     try {
