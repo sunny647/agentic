@@ -284,6 +284,23 @@
       clip: rect(0,0,0,0);
       border: 0;
     }
+    /* Two-column layout for Issue Key and Summary */
+    .row {
+      display: flex;
+      gap: 1em;
+      width: 100%;
+    }
+    .row .col {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+    }
+    @media (max-width: 600px) {
+      .row {
+        flex-direction: column;
+        gap: 0.5em;
+      }
+    }
   </style>
 </head>
 <body>
@@ -294,29 +311,28 @@
   <button class="night-toggle" id="nightToggle" title="Toggle night mode" aria-label="Toggle night mode">🌙</button>
   <h1>Submit Story for Agentic Software Development Life Cycle</h1>
   <form id="jiraForm" autocomplete="off">
-    <label for="key">Issue Key</label>
-    <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required aria-required="true" autocomplete="off">
-
-    <label for="summary">Summary</label>
-    <input type="text" id="summary" name="summary" required aria-required="true" autocomplete="off">
-
+    <div class="row">
+      <div class="col">
+        <label for="key">Issue Key</label>
+        <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required aria-required="true" autocomplete="off">
+      </div>
+      <div class="col">
+        <label for="summary">Summary</label>
+        <input type="text" id="summary" name="summary" required aria-required="true" autocomplete="off">
+      </div>
+    </div>
     <label for="description">Description</label>
     <textarea id="description" name="description" rows="4" required aria-required="true" autocomplete="off"></textarea>
-
     <button type="submit">Submit</button>
   </form>
-
   <div class="result" id="result" style="display:none;"></div>
-
   <div class="footer">
     &copy; 2024 SprintPilot. All rights reserved.
   </div>
-
   <script>
     // Night mode logic
     const nightToggle = document.getElementById('nightToggle');
     const NIGHT_MODE_KEY = 'nightModeEnabled';
-
     function setNightMode(enabled) {
       if (enabled) {
         document.body.classList.add('night-mode');
@@ -331,30 +347,35 @@
       }
       localStorage.setItem(NIGHT_MODE_KEY, enabled ? '1' : '0');
     }
-
-    // On load, set mode from localStorage
     (function() {
       const saved = localStorage.getItem(NIGHT_MODE_KEY);
       setNightMode(saved === '1');
     })();
-
     nightToggle.addEventListener('click', function() {
       const isNight = document.body.classList.contains('night-mode');
       setNightMode(!isNight);
     });
-
-    // Form submission logic
+    // Form validation and submission logic
     document.getElementById('jiraForm').addEventListener('submit', async function(e) {
       e.preventDefault();
-      // Clear the result div when submit is clicked
+      const key = document.getElementById('key').value.trim();
+      const summary = document.getElementById('summary').value.trim();
+      const description = document.getElementById('description').value.trim();
       const resultDiv = document.getElementById('result');
+      // Validation
+      if (!key || !summary || !description) {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '<span style="color:red;">All fields are required.</span>';
+        return;
+      }
+      // Jira key format validation (e.g. SCRUM-123)
+      if (!/^([A-Z][A-Z0-9]+)-\d+$/.test(key)) {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '<span style="color:red;">Issue Key must be in format PROJECT-123.</span>';
+        return;
+      }
       resultDiv.style.display = 'block';
       resultDiv.innerHTML = '<div class="spinner" role="status" aria-live="polite" aria-label="Loading"></div>';
-
-      const key = document.getElementById('key').value;
-      const summary = document.getElementById('summary').value;
-      const description = document.getElementById('description').value;
-
       // Construct minimal Jira-like payload
       const payload = {
         issue: {
@@ -365,17 +386,20 @@
           }
         }
       };
-
       try {
-        const res = await fetch('/api/story/run', {
+        const res = await fetch('/api/story/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        if (res.ok) {
+          resultDiv.innerHTML = '<span style="color: #00c2b2;">' + (data.message || 'Story submitted successfully!') + '</span>';
+        } else {
+          resultDiv.innerHTML = '<span style="color:red;">' + (data.error || 'Submission failed.') + '</span>';
+        }
       } catch (err) {
-        resultDiv.innerHTML = '<span style="color:red;">Error loading result.</span>';
+        resultDiv.innerHTML = '<span style="color:red;">Error submitting story.</span>';
       }
     });
   </script>
