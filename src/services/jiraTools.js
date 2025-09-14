@@ -2,6 +2,8 @@ import logger from '../logger.js';
 import JiraClient from 'jira-client';
 import axios from 'axios'; // For fetching images
 import { extractPlainTextFromAdf } from '../utils/adf-parser.js';
+import FormData from 'form-data'; // NEW: For building multipart/form-data with axios
+
 
 
 const jira = new JiraClient({
@@ -12,6 +14,49 @@ const jira = new JiraClient({
   apiVersion: '3',
   strictSSL: true
 });
+
+// --- Helper for robust attachment upload using direct Axios ---
+async function uploadAttachmentWithAxios(issueId, filename, buffer, mimeType) {
+  const auth = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
+  const attachmentUrl = `https://${process.env.JIRA_HOST}/rest/api/3/issue/${issueId}/attachments`;
+
+  const formData = new FormData();
+  formData.append('file', buffer, {
+    filename: filename,
+    contentType: mimeType,
+  });
+
+  try {
+    logger.info({ issueId, filename, mimeType, bufferLength: buffer.length }, 'Attempting attachment upload via direct Axios');
+
+    const response = await axios.post(attachmentUrl, formData, {
+      headers: {
+        ...formData.getHeaders(), // IMPORTANT: Get headers including boundary from form-data
+        'Authorization': `Basic ${auth}`,
+        'X-Atlassian-Token': 'no-check', // Crucial for attachment uploads
+      },
+      maxContentLength: Infinity, // Allow large files
+      maxBodyLength: Infinity,    // Allow large files
+    });
+    
+    logger.info({ issueId, filename, status: response.status, data: response.data }, 'Attachment upload successful via direct Axios');
+    return { success: true, issueId, response: response.data };
+  } catch (rawErr) {
+    let parsedError = rawErr.message || JSON.stringify(rawErr);
+    if (rawErr.response) {
+      try {
+        parsedError = rawErr.response.data; // Axios error.response.data is often parsed JSON
+        if (typeof parsedError === 'object') parsedError = JSON.stringify(parsedError);
+      } catch {
+        parsedError = rawErr.response.data.toString();
+      }
+      logger.error({ issueId, filename, status: rawErr.response.status, parsedError, rawErr }, 'Attachment upload failed via direct Axios');
+    } else {
+       logger.error({ issueId, filename, parsedError, rawErr }, 'Attachment upload failed via direct Axios (no response)');
+    }
+    throw new Error(`Attachment upload failed for ${filename}: ${JSON.stringify(parsedError)}`);
+  }
+}
 
 // Helper function to convert a string to a basic ADF paragraph
 const toAdfParagraph = (text) => ({
@@ -355,12 +400,12 @@ export const jiraTools = {
               const buffer = Buffer.from(parts[1], 'base64');
               
               // Correct method call with required parameters
-              await jira.addAttachmentOnIssue(issueId, {
-                  filename: img.filename,
-                  buffer: buffer,
-                  mimeType: mimeType
-              });
-              logger.info({ issueId, filename: img.filename, mimeType: mimeType }, 'Jira attachment uploaded successfully');
+               const uploadResult = await uploadAttachmentWithAxios(issueId, img.filename, buffer, mimeType);
+              if (uploadResult.error) {
+                  throw new Error(`Attachment upload failed for ${img.filename}: ${uploadResult.error}`);
+              }
+
+              logger.info({ issueId, filename: img.filename, mimeType: mimeType }, 'Jira attachment uploaded successfully via raw method');
             } else {
               logger.warn({ issueId, img }, 'Skipping attachment upload: Missing base64 data or filename.');
             }
