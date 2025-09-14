@@ -400,9 +400,33 @@
       `;
     }
 
-    // Format supervisor decision
+    // Format supervisor decision (robust pretty rendering)
     function renderSupervisorDecision(decision) {
       if (!decision) return '';
+      // If it's an object, pretty print as JSON with some formatting
+      if (typeof decision === 'object') {
+        // Try to render key fields if present
+        let html = '';
+        if ('status' in decision || 'missing' in decision || 'revisionNeeded' in decision || 'feedback' in decision) {
+          html += `<div><b>Status:</b> <span style="color:${decision.status === 'ok' ? '#00c2b2' : '#ffb347'}">${decision.status}</span></div>`;
+          if (Array.isArray(decision.missing) && decision.missing.length > 0) {
+            html += `<div><b>Missing:</b> ${decision.missing.join(', ')}</div>`;
+          }
+          if (Array.isArray(decision.revisionNeeded) && decision.revisionNeeded.length > 0) {
+            html += `<div><b>Revision Needed:</b> ${decision.revisionNeeded.join(', ')}</div>`;
+          }
+          if (decision.feedback) {
+            html += `<div style="margin-top:0.5em;"><b>Feedback:</b><br><span style="white-space:pre-line;">${typeof decision.feedback === 'string' ? decision.feedback : JSON.stringify(decision.feedback, null, 2)}</span></div>`;
+          }
+        } else {
+          html += `<pre>${JSON.stringify(decision, null, 2)}</pre>`;
+        }
+        return `
+          <div class="supervisor-decision-title">Supervisor Decision</div>
+          <div class="supervisor-decision-content">${html}</div>
+        `;
+      }
+      // If it's a string, just show it
       return `
         <div class="supervisor-decision-title">Supervisor Decision</div>
         <div class="supervisor-decision-content">${decision}</div>
