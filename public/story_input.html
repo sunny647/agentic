@@ -92,17 +92,19 @@
       flex-shrink: 0;
     }
     .jira-title {
-      font-size: 1.1em;
-      font-weight: 600;
+      font-size: 2em;
+      font-weight: 700;
       color: #fff;
       letter-spacing: 0.2px;
+      line-height: 1.1;
     }
     .jira-subtitle {
-      font-size: 1em;
+      font-size: 1.1em;
       font-weight: 400;
       color: #bdbdfc;
       margin-left: 0.5em;
       letter-spacing: 0.1px;
+      line-height: 1.1;
     }
     .jira-main-title {
       font-size: 1.35em;
@@ -300,6 +302,12 @@
         white-space: normal;
         text-overflow: unset;
       }
+      .jira-title {
+        font-size: 1.4em;
+      }
+      .jira-subtitle {
+        font-size: 1em;
+      }
     }
     @media (max-width: 600px) {
       .jira-card {
@@ -323,6 +331,12 @@
       .jira-header {
         gap: 0.6em;
       }
+      .jira-title {
+        font-size: 1.1em;
+      }
+      .jira-subtitle {
+        font-size: 0.95em;
+      }
     }
     /* Accessibility: focus ring for all inputs */
     input:focus, textarea:focus, button:focus {
@@ -336,7 +350,7 @@
     <div class="jira-header">
       <div class="jira-logo">S</div>
       <span class="jira-title">SprintPilot</span>
-      <span class="jira-subtitle">Agentic SDLC Story Input</span>
+      <span class="jira-subtitle">Agentic SDLC</span>
     </div>
     <div class="jira-main-title">Submit Story for Agentic Software Development Life Cycle</div>
     <form id="jiraForm" autocomplete="off">
