@@ -19,7 +19,7 @@
       --button-hover: #6c47ff;
       --button-text: #fff;
       --shadow: 0 4px 32px 0 rgba(108,71,255,0.18);
-      --radius: 18px;
+      --radius: 22px;
       --transition: 0.25s cubic-bezier(.4,0,.2,1);
     }
     html {
@@ -45,28 +45,29 @@
     .jira-card {
       background: var(--form-bg-dark);
       border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 2.5em 2.2em 2em 2.2em;
+      box-shadow: 0 0 32px 0 rgba(167,139,250,0.18), 0 2px 8px rgba(0,0,0,0.10);
+      padding: 2.8em 2.5em 2.2em 2.5em;
       margin-top: 4.5em;
-      max-width: 420px;
+      max-width: 440px;
       width: 100%;
       display: flex;
       flex-direction: column;
       align-items: stretch;
       position: relative;
       z-index: 2;
+      border: 1.5px solid rgba(167,139,250,0.10);
     }
     .jira-header {
       display: flex;
       align-items: center;
       gap: 1em;
-      margin-bottom: 0.7em;
+      margin-bottom: 0.2em;
     }
     .jira-logo {
       background: #6c47ff;
       color: #fff;
       font-weight: 700;
-      font-size: 1.5em;
+      font-size: 1.6em;
       border-radius: 12px;
       width: 44px;
       height: 44px;
@@ -79,21 +80,29 @@
     .jira-title {
       font-size: 1.1em;
       font-weight: 600;
-      color: #bdbdfc;
+      color: #fff;
       letter-spacing: 0.2px;
     }
+    .jira-subtitle {
+      font-size: 1em;
+      font-weight: 400;
+      color: #bdbdfc;
+      margin-left: 0.5em;
+      letter-spacing: 0.1px;
+    }
     .jira-main-title {
-      font-size: 1.25em;
+      font-size: 1.35em;
       font-weight: 700;
       color: #fff;
-      margin: 0.7em 0 1.5em 0;
-      line-height: 1.3;
+      margin: 1.1em 0 1.7em 0;
+      line-height: 1.25;
       text-align: left;
+      letter-spacing: 0.01em;
     }
     .jira-fields-row {
       display: flex;
       gap: 1em;
-      margin-bottom: 1.1em;
+      margin-bottom: 1.2em;
     }
     .jira-field {
       flex: 1 1 0;
@@ -102,17 +111,17 @@
     }
     label {
       font-weight: 600;
-      font-size: 1em;
-      color: #bdbdfc;
+      font-size: 1.01em;
+      color: #fff;
       margin-bottom: 0.3em;
       letter-spacing: 0.1px;
     }
     input[type=text], textarea {
-      background: var(--input-bg-dark);
-      color: var(--text-dark);
-      border: 1.5px solid var(--input-border-dark);
-      border-radius: 8px;
-      font-size: 1em;
+      background: #23243a;
+      color: #fff;
+      border: 1.5px solid #393a4a;
+      border-radius: 10px;
+      font-size: 1.08em;
       font-family: inherit;
       padding: 0.7em 1em;
       margin-bottom: 0.1em;
@@ -124,36 +133,57 @@
       border-color: var(--primary);
       background: #23213a;
     }
+    input[type=text]::placeholder {
+      color: #bdbdfc;
+      opacity: 1;
+      font-size: 0.98em;
+      font-weight: 400;
+    }
     textarea {
-      min-height: 70px;
+      min-height: 64px;
       resize: vertical;
       margin-bottom: 0.2em;
+      font-size: 1.08em;
+      border-radius: 10px;
+      border: 1.5px solid var(--primary);
+      background: #18192a;
+      color: #fff;
+      padding: 0.7em 1em;
+      transition: border var(--transition), background var(--transition);
+    }
+    textarea:focus {
+      border-color: var(--primary-dark);
+      background: #23213a;
     }
     .jira-submit-btn {
-      margin-top: 1.3em;
-      padding: 0.9em 0;
-      background: var(--button-bg);
+      margin-top: 1.5em;
+      padding: 1em 0;
+      background: linear-gradient(90deg, #a78bfa 0%, #6c47ff 100%);
       color: var(--button-text);
       border: none;
-      border-radius: 8px;
-      font-size: 1.1em;
+      border-radius: 10px;
+      font-size: 1.18em;
       font-weight: 700;
       letter-spacing: 0.5px;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(108,71,255,0.10);
-      transition: background var(--transition);
+      transition: background var(--transition), box-shadow var(--transition);
+      width: 100%;
+      outline: none;
     }
     .jira-submit-btn:hover, .jira-submit-btn:focus {
-      background: var(--button-hover);
+      background: linear-gradient(90deg, #6c47ff 0%, #a78bfa 100%);
+      box-shadow: 0 0 0 2px #a78bfa44;
     }
     .jira-footer {
       margin-top: 2.5em;
       color: #bdbdfc;
-      font-size: 1em;
+      font-size: 1.05em;
       text-align: center;
       opacity: 0.85;
       letter-spacing: 0.1px;
       z-index: 1;
+      width: 100%;
     }
     .jira-description {
       margin-bottom: 0.7em;
@@ -163,7 +193,7 @@
       background: #1e1f32;
       color: #fff;
       padding: 1.1em 1em;
-      border-radius: 8px;
+      border-radius: 10px;
       min-height: 2em;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       font-size: 1em;
@@ -191,9 +221,19 @@
         padding: 1.2em 0.7em 1em 0.7em;
         margin-top: 2em;
       }
+      .jira-fields-row {
+        flex-direction: column;
+        gap: 0.7em;
+      }
       .jira-footer {
         font-size: 0.95em;
         margin-top: 1.5em;
+      }
+      .jira-main-title {
+        font-size: 1.1em;
+      }
+      .jira-header {
+        gap: 0.6em;
       }
     }
     /* Accessibility: focus ring for all inputs */
@@ -208,6 +248,7 @@
     <div class="jira-header">
       <div class="jira-logo">S</div>
       <span class="jira-title">SprintPilot</span>
+      <span class="jira-subtitle">Agentic SDLC Story Input</span>
     </div>
     <div class="jira-main-title">Submit Story for Agentic Software Development Life Cycle</div>
     <form id="jiraForm" autocomplete="off">
@@ -223,7 +264,7 @@
       </div>
       <div class="jira-field jira-description">
         <label for="description">Description</label>
-        <textarea id="description" name="description" rows="4" required aria-required="true" autocomplete="off"></textarea>
+        <textarea id="description" name="description" rows="3" required aria-required="true" autocomplete="off"></textarea>
       </div>
       <button type="submit" class="jira-submit-btn">Submit</button>
     </form>
