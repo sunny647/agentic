@@ -7,32 +7,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #6c47ff;
-      --primary-dark: #4b2fcf;
+      --primary: #a78bfa;
+      --primary-dark: #6c47ff;
       --accent: #00c2b2;
-      --background-light: #f7f9fb;
-      --background-dark: #181a1b;
-      --form-bg-light: #fff;
-      --form-bg-dark: #23272b;
-      --text-light: #23272b;
+      --background-dark: #18192a;
+      --form-bg-dark: #23243a;
       --text-dark: #f7f9fb;
-      --button-bg: var(--primary);
-      --button-hover: var(--primary-dark);
+      --input-bg-dark: #23243a;
+      --input-border-dark: #393a4a;
+      --button-bg: #a78bfa;
+      --button-hover: #6c47ff;
       --button-text: #fff;
-      --result-bg-light: #f7f9fb;
-      --result-bg-dark: #23272b;
-      --input-bg-light: #f7f9fb;
-      --input-bg-dark: #23272b;
-      --input-border-light: #d1d5db;
-      --input-border-dark: #444;
-      --header-bg: #fff;
-      --header-bg-dark: #23272b;
-      --footer-bg: #f7f9fb;
-      --footer-bg-dark: #181a1b;
-      --footer-text: #888;
-      --footer-text-dark: #bbb;
-      --shadow: 0 4px 24px rgba(108,71,255,0.08);
-      --radius: 14px;
+      --shadow: 0 4px 32px 0 rgba(108,71,255,0.18);
+      --radius: 18px;
       --transition: 0.25s cubic-bezier(.4,0,.2,1);
     }
     html {
@@ -46,127 +33,109 @@
       font-family: 'Inter', Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background: var(--background-light);
-      color: var(--text-light);
       min-height: 100vh;
-      transition: background var(--transition), color var(--transition);
+      background: repeating-linear-gradient(135deg, #18192a 0 40px, #1e1f32 40px 80px);
+      color: var(--text-dark);
       display: flex;
       flex-direction: column;
-      align-items: center;
-    }
-    .header {
-      display: flex;
       align-items: center;
       justify-content: flex-start;
-      background: var(--header-bg);
-      padding: 2rem 2rem 1.5rem 2rem;
-      border-radius: var(--radius) var(--radius) 0 0;
-      margin-top: 2rem;
-      margin-bottom: 2rem;
-      box-shadow: var(--shadow);
-      border-bottom: 1px solid #eee;
-      width: 100%;
-      max-width: 540px;
-      transition: background var(--transition), border-bottom var(--transition);
-    }
-    .header img {
-      height: 48px;
-      margin-right: 1.2em;
-      filter: none !important;
-      background: transparent;
-      border-radius: 0;
-      box-shadow: none;
-      transition: none;
-      /* Ensure logo is always visible and not affected by mode */
-      display: block;
-    }
-    /* Remove any filter in night mode for logo */
-    body.night-mode .header img {
-      filter: none !important;
-    }
-    .header-title {
-      font-size: 2em;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: var(--primary);
-    }
-    .footer {
-      background: var(--footer-bg);
-      color: var(--footer-text);
-      text-align: center;
-      padding: 1.2em 0;
-      border-radius: 0 0 var(--radius) var(--radius);
-      margin-top: 3em;
-      font-size: 1em;
-      width: 100%;
-      max-width: 540px;
       transition: background var(--transition), color var(--transition);
     }
-    /* Night mode styles */
-    body.night-mode {
-      background: var(--background-dark);
-      color: var(--text-dark);
-    }
-    body.night-mode .header {
-      background: var(--header-bg-dark);
-      border-bottom: 1px solid #23272b; /* match header bg, removes white line */
-    }
-    body.night-mode .footer {
-      background: var(--footer-bg-dark);
-      color: var(--footer-text-dark);
-    }
-    h1 {
-      font-size: 1.5em;
-      font-weight: 600;
-      margin-bottom: 1.5em;
-      color: var(--primary-dark);
-      letter-spacing: 0.5px;
-      text-align: center;
-    }
-    form#jiraForm {
-      background: var(--form-bg-light);
-      padding: 2.5em 2em 2em 2em;
+    .jira-card {
+      background: var(--form-bg-dark);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
+      padding: 2.5em 2.2em 2em 2.2em;
+      margin-top: 4.5em;
+      max-width: 420px;
       width: 100%;
-      max-width: 540px;
-      margin: 0 auto;
-      transition: background var(--transition);
       display: flex;
       flex-direction: column;
-      gap: 1.2em;
+      align-items: stretch;
+      position: relative;
+      z-index: 2;
+    }
+    .jira-header {
+      display: flex;
+      align-items: center;
+      gap: 1em;
+      margin-bottom: 0.7em;
+    }
+    .jira-logo {
+      background: #6c47ff;
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.5em;
+      border-radius: 12px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(108,71,255,0.10);
+      flex-shrink: 0;
+    }
+    .jira-title {
+      font-size: 1.1em;
+      font-weight: 600;
+      color: #bdbdfc;
+      letter-spacing: 0.2px;
+    }
+    .jira-main-title {
+      font-size: 1.25em;
+      font-weight: 700;
+      color: #fff;
+      margin: 0.7em 0 1.5em 0;
+      line-height: 1.3;
+      text-align: left;
+    }
+    .jira-fields-row {
+      display: flex;
+      gap: 1em;
+      margin-bottom: 1.1em;
+    }
+    .jira-field {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
     }
     label {
       font-weight: 600;
+      font-size: 1em;
+      color: #bdbdfc;
       margin-bottom: 0.3em;
-      color: var(--primary-dark);
-      letter-spacing: 0.2px;
+      letter-spacing: 0.1px;
     }
-    textarea, input[type=text] {
-      width: 100%;
-      padding: 0.8em 1em;
-      background: var(--input-bg-light);
-      color: var(--text-light);
-      border: 1.5px solid var(--input-border-light);
-      border-radius: 7px;
+    input[type=text], textarea {
+      background: var(--input-bg-dark);
+      color: var(--text-dark);
+      border: 1.5px solid var(--input-border-dark);
+      border-radius: 8px;
       font-size: 1em;
       font-family: inherit;
-      margin-top: 0.2em;
-      margin-bottom: 0.2em;
+      padding: 0.7em 1em;
+      margin-bottom: 0.1em;
       transition: background var(--transition), color var(--transition), border var(--transition);
       outline: none;
+      box-shadow: none;
     }
-    textarea:focus, input[type=text]:focus {
+    input[type=text]:focus, textarea:focus {
       border-color: var(--primary);
-      background: #f0f4ff;
+      background: #23213a;
     }
-    button[type=submit] {
-      margin-top: 1em;
-      padding: 0.8em 0;
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+      margin-bottom: 0.2em;
+    }
+    .jira-submit-btn {
+      margin-top: 1.3em;
+      padding: 0.9em 0;
       background: var(--button-bg);
       color: var(--button-text);
       border: none;
-      border-radius: 7px;
+      border-radius: 8px;
       font-size: 1.1em;
       font-weight: 700;
       letter-spacing: 0.5px;
@@ -174,27 +143,39 @@
       box-shadow: 0 2px 8px rgba(108,71,255,0.10);
       transition: background var(--transition);
     }
-    button[type=submit]:hover, button[type=submit]:focus {
+    .jira-submit-btn:hover, .jira-submit-btn:focus {
       background: var(--button-hover);
     }
-    .result {
-      margin-top: 2em;
-      background: var(--result-bg-light);
-      padding: 1.2em 1em;
-      border-radius: 7px;
+    .jira-footer {
+      margin-top: 2.5em;
+      color: #bdbdfc;
+      font-size: 1em;
+      text-align: center;
+      opacity: 0.85;
+      letter-spacing: 0.1px;
+      z-index: 1;
+    }
+    .jira-description {
+      margin-bottom: 0.7em;
+    }
+    .jira-result {
+      margin-top: 1.5em;
+      background: #1e1f32;
+      color: #fff;
+      padding: 1.1em 1em;
+      border-radius: 8px;
       min-height: 2em;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       font-size: 1em;
       width: 100%;
-      max-width: 540px;
-      transition: background var(--transition), color var(--transition);
       word-break: break-word;
+      display: none;
     }
     .spinner {
       display: inline-block;
       width: 32px;
       height: 32px;
-      border: 4px solid #e0e0e0;
+      border: 4px solid #2d2e44;
       border-top: 4px solid var(--primary);
       border-radius: 50%;
       animation: spin 1s linear infinite;
@@ -204,145 +185,54 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    body.night-mode form#jiraForm {
-      background: var(--form-bg-dark);
-    }
-    body.night-mode .result {
-      background: var(--result-bg-dark);
-      color: var(--text-dark);
-    }
-    body.night-mode textarea,
-    body.night-mode input[type=text] {
-      background: var(--input-bg-dark);
-      color: var(--text-dark);
-      border: 1.5px solid var(--input-border-dark);
-    }
-    body.night-mode textarea:focus,
-    body.night-mode input[type=text]:focus {
-      background: #23213a;
-    }
-    /* Night mode toggle button */
-    .night-toggle {
-      position: fixed;
-      top: 1.5em;
-      right: 2em;
-      z-index: 1000;
-      background: var(--form-bg-light);
-      color: var(--primary);
-      border: none;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      font-size: 1.6em;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: background var(--transition), color var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    body.night-mode .night-toggle {
-      background: var(--form-bg-dark);
-      color: var(--accent);
-    }
-    .night-toggle:focus {
-      outline: 2px solid var(--primary);
-    }
-    /* Responsive design */
     @media (max-width: 600px) {
-      .header, .footer, form#jiraForm, .result {
+      .jira-card {
         max-width: 98vw;
-        padding-left: 1em;
-        padding-right: 1em;
+        padding: 1.2em 0.7em 1em 0.7em;
+        margin-top: 2em;
       }
-      .header {
-        padding: 1.2em 1em 1em 1em;
-        margin-top: 1em;
-        margin-bottom: 1em;
-      }
-      form#jiraForm {
-        padding: 1.5em 1em 1em 1em;
-      }
-      .night-toggle {
-        top: 1em;
-        right: 1em;
+      .jira-footer {
+        font-size: 0.95em;
+        margin-top: 1.5em;
       }
     }
     /* Accessibility: focus ring for all inputs */
     input:focus, textarea:focus, button:focus {
-      outline: 2px solid var(--accent);
+      outline: 2px solid var(--primary);
       outline-offset: 2px;
-    }
-    /* Visually hidden for screen readers */
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0,0,0,0);
-      border: 0;
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <img src="/assets/sprintpilot-logo.svg" alt="SprintPilot Logo" id="logo-img" />
-    <span class="header-title">Agentic SDLC Story Input</span>
+  <div class="jira-card">
+    <div class="jira-header">
+      <div class="jira-logo">S</div>
+      <span class="jira-title">SprintPilot</span>
+    </div>
+    <div class="jira-main-title">Submit Story for Agentic Software Development Life Cycle</div>
+    <form id="jiraForm" autocomplete="off">
+      <div class="jira-fields-row">
+        <div class="jira-field">
+          <label for="key">Issue Key</label>
+          <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required aria-required="true" autocomplete="off">
+        </div>
+        <div class="jira-field">
+          <label for="summary">Summary</label>
+          <input type="text" id="summary" name="summary" required aria-required="true" autocomplete="off">
+        </div>
+      </div>
+      <div class="jira-field jira-description">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="4" required aria-required="true" autocomplete="off"></textarea>
+      </div>
+      <button type="submit" class="jira-submit-btn">Submit</button>
+    </form>
+    <div class="jira-result" id="result"></div>
   </div>
-  <button class="night-toggle" id="nightToggle" title="Toggle night mode" aria-label="Toggle night mode">🌙</button>
-  <h1>Submit Story for Agentic Software Development Life Cycle</h1>
-  <form id="jiraForm" autocomplete="off">
-    <label for="key">Issue Key</label>
-    <input type="text" id="key" name="key" placeholder="e.g. SCRUM-1" required aria-required="true" autocomplete="off">
-
-    <label for="summary">Summary</label>
-    <input type="text" id="summary" name="summary" required aria-required="true" autocomplete="off">
-
-    <label for="description">Description</label>
-    <textarea id="description" name="description" rows="4" required aria-required="true" autocomplete="off"></textarea>
-
-    <button type="submit">Submit</button>
-  </form>
-
-  <div class="result" id="result" style="display:none;"></div>
-
-  <div class="footer">
+  <div class="jira-footer">
     &copy; 2024 SprintPilot. All rights reserved.
   </div>
-
   <script>
-    // Night mode logic
-    const nightToggle = document.getElementById('nightToggle');
-    const NIGHT_MODE_KEY = 'nightModeEnabled';
-
-    function setNightMode(enabled) {
-      if (enabled) {
-        document.body.classList.add('night-mode');
-        nightToggle.innerText = '\u2600'; // Sun icon
-        nightToggle.title = 'Switch to day mode';
-        nightToggle.setAttribute('aria-label', 'Switch to day mode');
-      } else {
-        document.body.classList.remove('night-mode');
-        nightToggle.innerText = '\uD83C\uDF19'; // Moon icon
-        nightToggle.title = 'Switch to night mode';
-        nightToggle.setAttribute('aria-label', 'Switch to night mode');
-      }
-      localStorage.setItem(NIGHT_MODE_KEY, enabled ? '1' : '0');
-    }
-
-    // On load, set mode from localStorage
-    (function() {
-      const saved = localStorage.getItem(NIGHT_MODE_KEY);
-      setNightMode(saved === '1');
-    })();
-
-    nightToggle.addEventListener('click', function() {
-      const isNight = document.body.classList.contains('night-mode');
-      setNightMode(!isNight);
-    });
-
     // Form submission logic
     document.getElementById('jiraForm').addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -375,7 +265,7 @@
         const data = await res.json();
         resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
       } catch (err) {
-        resultDiv.innerHTML = '<span style="color:red;">Error loading result.</span>';
+        resultDiv.innerHTML = '<span style="color:#ff6b6b;">Error loading result.</span>';
       }
     });
   </script>
