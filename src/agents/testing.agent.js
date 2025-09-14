@@ -8,21 +8,27 @@ import { jiraTools } from '../services/jiraTools.js'; // Import jiraTools
 
 export async function testingAgent(state) {
   logger.info({ state }, 'testingAgent called');
+  const userContentParts = [
+    { type: 'text', text: state.enrichedStory || state.story },
+    { type: 'text', text: `\nAcceptance Criteria: ${(state.acceptanceCriteria || []).join('\n')}` },
+    { type: 'text', text: `\nRisks: ${(state.decomposition?.risks || []).join('\n')}` }
+  ];
+  if (state.jiraImages && state.jiraImages.length > 0) {
+    userContentParts.push({ type: 'text', text: '\n\n**Attached UI/Visual References:**\n' });
+    state.jiraImages.forEach((img, index) => {
+      userContentParts.push({ type: 'image_url', image_url: { url: img.base64 } });
+      userContentParts.push({ type: 'text', text: `\n(Image ${index + 1}: [ImageName: ${img.filename}, ImageURL: ${img.url}])\n` });
+    });
+    userContentParts.push({ type: 'text', text: '\nConsider these images carefully for detailed UI requirements and context when generating tests.' });
+  }
 
   const prompt = [
-    {
-      role: 'system',
-      content:
-        'You are a QA lead. Generate detailed test scenarios and Gherkin test cases. ' +
-        'Cover all identified risks and acceptance criteria. Format clearly with "Scenario:" and steps.' +
-        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`
+    { role: 'system', content:
+      'You are a QA lead. Generate detailed test scenarios and Gherkin test cases. ' +
+      'Cover all identified risks and acceptance criteria. Format clearly with "Scenario:" and steps.' +
+      `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`
     },
-    {
-      role: 'user',
-      content: `Story: ${state.enrichedStory || state.story}
-  Acceptance Criteria: ${(state.acceptanceCriteria || []).join('\n')}
-Risks: ${(state.decomposition?.risks || []).join('\n')}`,
-    },
+    { role: 'user', content: userContentParts }
   ];
 
   const resp = await smallModel.invoke(prompt);

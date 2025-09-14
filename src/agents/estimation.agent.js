@@ -27,24 +27,30 @@ export async function estimationAgent(state) {
   const codingTasksSummary = (state.codingTasks || []).map(task => `${task.type}: ${task.task}`).join('\n- ');
   const acceptanceCriteriaList = (state.acceptanceCriteria || []).join('\n- ');
 
+  const userContentParts = [
+    { type: 'text', text: state.enrichedStory || state.story },
+    { type: 'text', text: `\nAcceptance Criteria:\n- ${acceptanceCriteriaList}` },
+    { type: 'text', text: `\nIdentified Coding Tasks:\n- ${codingTasksSummary}` }
+  ];
+  if (state.jiraImages && state.jiraImages.length > 0) {
+    userContentParts.push({ type: 'text', text: '\n\n**Attached UI/Visual References:**\n' });
+    state.jiraImages.forEach((img, index) => {
+      userContentParts.push({ type: 'image_url', image_url: { url: img.base64 } });
+      userContentParts.push({ type: 'text', text: `\n(Image ${index + 1}: [ImageName: ${img.filename}, ImageURL: ${img.url}])\n` });
+    });
+    userContentParts.push({ type: 'text', text: '\nConsider these images carefully for detailed UI requirements and context when estimating.' });
+  }
+
   const prompt = [
-    {
-      role: 'system',
-      content:
-        'You are a senior engineering manager. Your task is to provide a detailed solution approach and ' +
-        'a Level of Effort (LOE) breakdown for the given user story. ' +
-        'The LOE should be provided for Frontend (FE), Backend (BE), Quality Assurance (QA), and Code Review (Review). ' +
-        'Use units for LOE as hrs but ensure consistency for a single story.' +
-        'Provide a concise but detailed approach for implementation.' +
-        `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}` +
-        `\n\nUser Story: ${state.enrichedStory}` +
-        (acceptanceCriteriaList ? `\n\nAcceptance Criteria:\n- ${acceptanceCriteriaList}` : '') +
-        (codingTasksSummary ? `\n\nIdentified Coding Tasks:\n- ${codingTasksSummary}` : '')
+    { role: 'system', content:
+      'You are a senior engineering manager. Your task is to provide a detailed solution approach and ' +
+      'a Level of Effort (LOE) breakdown for the given user story. ' +
+      'The LOE should be provided for Frontend (FE), Backend (BE), Quality Assurance (QA), and Code Review (Review). ' +
+      'Use units for LOE as hrs but ensure consistency for a single story.' +
+      'Provide a concise but detailed approach for implementation.' +
+      `\n\nProject context: ${JSON.stringify(state.contextJson)}\nProject file metadata: ${JSON.stringify(state.projectFileMetadataJson)}`
     },
-    {
-      role: 'user',
-      content: 'Generate the solution approach and LOE breakdown.',
-    },
+    { role: 'user', content: userContentParts }
   ];
 
   let estimationResult; // No initializer needed here as it's assigned in try/catch

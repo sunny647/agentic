@@ -66,12 +66,23 @@ Project file metadata: ${JSON.stringify(state.projectFileMetadataJson)}
 
   logger.info({ system }, 'codingAgent system prompt');
 
-  const user = `Story: ${state.enrichedStory || state.story}\n\nTasks:\n- ${tasks.join('\n- ')}`;
-
+  const userContentParts = [
+    { type: 'text', text: state.enrichedStory || state.story },
+    { type: 'text', text: `\nTasks:\n- ${tasks.map(t => t.task || t).join('\n- ')}` }
+  ];
+  if (state.jiraImages && state.jiraImages.length > 0) {
+    userContentParts.push({ type: 'text', text: '\n\n**Attached UI/Visual References:**\n' });
+    state.jiraImages.forEach((img, index) => {
+      userContentParts.push({ type: 'image_url', image_url: { url: img.base64 } });
+      userContentParts.push({ type: 'text', text: `\n(Image ${index + 1}: [ImageName: ${img.filename}, ImageURL: ${img.url}])\n` });
+    });
+    userContentParts.push({ type: 'text', text: '\nConsider these images carefully for detailed UI requirements and context when generating code.' });
+  }
+  
   const resp = await codeAgent.invoke({
     messages: [
       { role: "system", content: [{ type: "text", text: system }] },
-      { role: "user", content: [{ type: "text", text: user }] },
+      { role: "user", content: userContentParts },
     ],
   });
 

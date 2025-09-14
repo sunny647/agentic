@@ -33,24 +33,35 @@ export async function decompositionAgent(state) {
 
   // Prepare the user content for the LLM
   const userContent = JSON.stringify({
-    story: state.enrichedStory || state.story,
-    acceptanceCriteria: state.acceptanceCriteria,
     contextDocs: state.contextJson,
     projectFileMetadataJson: state.projectFileMetadataJson // Assuming ctx.documents is already an array of strings or suitable for JSON.stringify
   }, null, 2);
 
 
+  const systemPromptText =
+    `You are a senior tech lead. Decompose the enriched user story into clear technical subtasks for Frontend (FE), Backend (BE), and Shared categories. For each subtask, provide a concise summary AND a detailed solution approach. Identify any potential technical risks.
+    Pay close attention to any provided images for UI requirements and visual context. Add the images in the decomposition output.
+    Your response MUST be a valid JSON object strictly conforming to the following schema:
+    ${JSON.stringify(DecompositionOutputSchema.shape, null, 2)}
+    Use the provided project context (architecture documents, code references, acceptance criteria) to ensure correctness, alignment, and comprehensive decomposition.`;
+
+  const userContentParts = [
+    { type: 'text', text: userContent },
+    { type: 'text', text: `\nStory Requirements: ${JSON.stringify(state.enrichedStory || state.story)}` },
+    { type: 'text', text: `\nAcceptance Criteria: ${JSON.stringify(state.acceptanceCriteria)}` }
+  ];
+  if (state.jiraImages && state.jiraImages.length > 0) {
+    userContentParts.push({ type: 'text', text: '\n\n**Attached UI/Visual References:**\n' });
+    state.jiraImages.forEach((img, index) => {
+      userContentParts.push({ type: 'image_url', image_url: { url: img.base64 } });
+      userContentParts.push({ type: 'text', text: `\n(Image ${index + 1}: [ImageName: ${img.filename}, ImageURL: ${img.url}])\n` });
+    });
+    userContentParts.push({ type: 'text', text: '\nConsider these images carefully for detailed UI requirements and context when decomposing the story.' });
+  }
+
   const prompt = [
-    {
-      role: 'system',
-      content:
-        `You are a senior tech lead. Decompose the enriched user story into clear technical subtasks for Frontend (FE), Backend (BE), and Shared categories. For each subtask, provide a concise summary AND a detailed solution approach. Identify any potential technical risks.
-        Your response MUST be a valid JSON object strictly conforming to the following schema:
-        ${JSON.stringify(DecompositionOutputSchema.shape, null, 2)}
-        Use the provided project context (architecture documents, code references, acceptance criteria) to ensure correctness, alignment, and comprehensive decomposition.`},
-    {
-      role: 'user', content: userContent
-    },
+    { role: 'system', content: systemPromptText },
+    { role: 'user', content: userContentParts }
   ];
 
   let decompositionResult; // Declare variable without initializer
