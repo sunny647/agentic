@@ -340,15 +340,32 @@ export const jiraTools = {
 
         await jira.updateIssue(issueId, updateFields);
         logger.info({ issueId }, 'Jira story updated successfully');
-        // 2. Upload images if provided
+        // 2. Upload images if provided and valid
         if (jiraImages && Array.isArray(jiraImages) && jiraImages.length > 0) {
           for (const img of jiraImages) {
-            // Convert base64 to buffer
-            const buffer = Buffer.from(img.base64, 'base64');
-            await jira.addAttachmentOnIssue(issueId, buffer, img.filename);
+            if (img.base64 && img.filename) {
+              // Extract base64 data and mime type from the data URI
+              const parts = img.base64.split(',');
+              if (parts.length < 2) {
+                  logger.warn({ url: img.url, issueId, filename: img.filename }, 'Invalid Base64 data URI format, skipping attachment upload.');
+                  continue;
+              }
+              const mimeTypeMatch = parts[0].match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64/);
+              const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'application/octet-stream';
+              const buffer = Buffer.from(parts[1], 'base64');
+              
+              // Correct method call with required parameters
+              await jira.addAttachmentOnIssue(issueId, {
+                  filename: img.filename,
+                  buffer: buffer,
+                  mimeType: mimeType
+              });
+              logger.info({ issueId, filename: img.filename, mimeType: mimeType }, 'Jira attachment uploaded successfully');
+            } else {
+              logger.warn({ issueId, img }, 'Skipping attachment upload: Missing base64 data or filename.');
+            }
           }
         }
-
         return { success: true, issueId };
       } catch (err) {
         logger.error({
