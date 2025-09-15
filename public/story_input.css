@@ -28,6 +28,8 @@
   --font-size-lg: 1.28rem;
   --font-size-xl: 1.6rem;
   --font-size-xxl: 2rem;
+  --supervisor-ok: #00c2b2;
+  --supervisor-error: #ff6b6b;
 }
 html {
   box-sizing: border-box;
@@ -294,6 +296,18 @@ textarea:focus {
   padding-left: 1.2em;
   list-style: disc inside;
   word-break: break-word;
+}
+.logs-list li b {
+  font-weight: 700;
+}
+.logs-list li span {
+  font-weight: 600;
+}
+.logs-list li span[style*="#00c2b2"] {
+  color: var(--supervisor-ok) !important;
+}
+.logs-list li span[style*="#ff6b6b"] {
+  color: var(--supervisor-error) !important;
 }
 .error-message {
   color: var(--error);
