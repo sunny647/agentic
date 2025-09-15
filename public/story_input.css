@@ -71,6 +71,30 @@ body {
 .jira-card:focus-within, .jira-card:hover {
   box-shadow: 0 0 48px 0 #a78bfa55, 0 0 0 6px #a78bfa22;
 }
+/* --- Animated shadow effect for processing --- */
+.jira-card.processing {
+  animation: jira-shadow-pulse 1.6s cubic-bezier(.4,0,.2,1) infinite;
+  box-shadow: 0 0 48px 0 #a78bfa99, 0 0 0 8px #a78bfa33;
+  border-color: #a78bfa55;
+}
+@keyframes jira-shadow-pulse {
+  0% {
+    box-shadow: 0 0 32px 0 #a78bfa55, 0 0 0 4px #a78bfa22;
+    border-color: #a78bfa33;
+  }
+  40% {
+    box-shadow: 0 0 64px 0 #a78bfaee, 0 0 0 12px #a78bfa44;
+    border-color: #a78bfa99;
+  }
+  60% {
+    box-shadow: 0 0 80px 0 #a78bfaee, 0 0 0 16px #a78bfa55;
+    border-color: #a78bfaee;
+  }
+  100% {
+    box-shadow: 0 0 32px 0 #a78bfa55, 0 0 0 4px #a78bfa22;
+    border-color: #a78bfa33;
+  }
+}
 .jira-header {
   display: flex;
   align-items: center;
