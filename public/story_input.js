@@ -3,13 +3,25 @@ function get(obj, path, fallback = undefined) {
   return path.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : fallback), obj);
 }
 
-// Format logs as a list
+// Format logs as a list, with supervisor log simplification
 function renderLogs(logs) {
   if (!Array.isArray(logs) || logs.length === 0) return '<div class="logs-title">No logs available.</div>';
   return `
     <div class="logs-title">Pipeline Logs</div>
     <ul class="logs-list">
-      ${logs.map(log => `<li>${log}</li>`).join('')}
+      ${logs.map(log => {
+        // Try to detect supervisor log JSON and simplify
+        if (typeof log === 'string') {
+          try {
+            const parsed = JSON.parse(log);
+            if (parsed && parsed.agent === 'supervisor' && parsed.status) {
+              // Show only status (ok or error)
+              return `<li><b>Supervisor:</b> <span style="color:${parsed.status === 'ok' ? '#00c2b2' : '#ff6b6b'}">${parsed.status}</span></li>`;
+            }
+          } catch (e) { /* not JSON, show as is */ }
+        }
+        return `<li>${log}</li>`;
+      }).join('')}
     </ul>
   `;
 }
