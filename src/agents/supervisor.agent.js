@@ -19,6 +19,7 @@ export async function supervisorAgent(state) {
     decomposition,
     tests,
     commitFiles,
+    solutionDesign, // NEW: Include solutionDesign in destructuring
     prUrl,
     logs = [],
   } = state;

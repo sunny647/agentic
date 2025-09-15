@@ -7,6 +7,16 @@ const JiraImageSchema = z.object({
   filename: z.string().optional().describe("Original filename of the image, if available."),
 });
 
+// Zod schemas for solution architect agent output
+const SolutionDesignOutputSchema = z.object({
+  title: z.string().describe("Concise title for the Confluence solution design page."),
+  solutionDesign: z.string().describe("Detailed solution design, including architecture overview, key components, data flow, and API considerations. Use Markdown format for readability (headings, bullet points, bold)."),
+  diagramCode: z.string().optional().describe("Mermaid or PlantUML code for a block diagram, sequence diagram, or data flow diagram. Can be empty if no diagram is generated."),
+  diagramType: z.enum(['mermaid', 'plantuml', 'none']).default('none').describe("Type of diagram generated: 'mermaid', 'plantuml', or 'none'."),
+  confluenceSpaceKey: z.string().describe("The Confluence space key where the page should be created (e.g., 'SP', 'DEV')."),
+  parentPageTitle: z.string().optional().describe("Optional title of a parent Confluence page under which this design should be nested. Leave undefined if no parent page is desired."),
+});
+
 export const StoryStateSchema = z.object({
   requestId: z.string(),
   issueID: z.string().optional(),
@@ -20,6 +30,7 @@ export const StoryStateSchema = z.object({
       constraints: z.array(z.string()).optional(),
     })
     .default({}),
+  solutionDesign: SolutionDesignOutputSchema.optional(), // NEW CHANNEL
   estimation: z
     .object({ storyPoints: z.number().optional(), confidence: z.number().optional(), notes: z.string().optional() })
     .optional(),

@@ -31,6 +31,17 @@ export const EstimationOutputSchema = z.object({ // Export if used in structured
   }).describe("Level of Effort breakdown by domain."),
 });
 
+// For Solution Architect agent
+export const SolutionDesignOutputSchema = z.object({
+  title: z.string().describe("Concise title for the Confluence solution design page."),
+  solutionDesign: z.string().describe("Detailed solution design, including architecture overview, key components, data flow, and API considerations. Use Markdown format for readability (headings, bullet points, bold)."),
+  diagramCode: z.string().optional().describe("Mermaid or PlantUML code for a block diagram, sequence diagram, or data flow diagram. Include ```mermaid or @startuml fences. Can be empty if no diagram is generated."),
+  diagramType: z.enum(['mermaid', 'plantuml', 'none']).default('none').describe("Type of diagram generated: 'mermaid', 'plantuml', or 'none'."),
+  confluenceSpaceKey: z.string().describe("The Confluence space key where the page should be created (e.g., 'SP', 'DEV')."),
+  parentPageTitle: z.string().optional().describe("Optional title of a parent Confluence page under which this design should be nested. Leave undefined if no parent page is desired."),
+});
+
+
 // For decomposition agent
 const DetailedTaskSchema = z.object({
   task: z.string().describe("Summary or title of the technical subtask."),
@@ -127,6 +138,32 @@ export function getPrompt(agentName, state) {
 
       return prompt;
 
+    case 'solutionArchitectAgent':
+      const solutionArchitectMainText =
+        `User Story: ${state.enrichedStory || state.story}\n\n` +
+        `Enrichment Details:\n${state.enrichedStory}\n\n` +
+        `Decomposition Tasks:\n${JSON.stringify(state.decomposition?.feTasks || [], null, 2)}\n` +
+        `${JSON.stringify(state.decomposition?.beTasks || [], null, 2)}\n` +
+        `${JSON.stringify(state.decomposition?.sharedTasks || [], null, 2)}\n\n` +
+        `Identified Risks:\n${(state.decomposition?.risks || []).join('\n- ')}\n\n` +
+        `Existing Estimation:\n${JSON.stringify(state.estimation, null, 2) || 'N/A'}\n\n` +
+        `Confluence Space Key: ${process.env.CONFLUENCE_DEFAULT_SPACE_KEY || "SPACE"}`; // Suggest default space
+
+      return [
+        {
+          role: 'system',
+          content:
+            `You are a highly skilled Solution Architect. Your task is to generate a detailed solution design for a given Jira story, considering its enrichment, decomposition, and estimation.
+            The design should include a clear architecture overview, key components, data flow, API considerations, and can include a relevant diagram.
+            Use Markdown formatting within the 'solutionDesign' field for headings, bullet points, and code blocks (e.g., \`\`\`js, \`\`\`mermaid).
+            If generating a diagram, provide the raw Mermaid or PlantUML code within the 'diagramCode' field and set 'diagramType' accordingly.
+            Pay close attention to any provided UI images to inform the visual aspects of the design. ` +
+            jsonOutputInstruction +
+            baseContext
+        },
+        { role: 'user', content: userContentPartsWithImages(solutionArchitectMainText) }
+      ];
+
     case 'decompositionAgent':
       // const ctx = await getContext('decomposition', state); // getContext should be called inside the agent if it's async
       logger.info(`Generating prompt for agent: ${agentName}`);
@@ -218,7 +255,21 @@ export function getPrompt(agentName, state) {
 
     case 'supervisorAgent':
       logger.info(`Generating prompt for agent: ${agentName}`);
-      const { estimation, decomposition, tests, commitFiles, prUrl } = state;
+      const { estimation, decomposition, solutionDesign, tests, commitFiles, prUrl } = state;
+      let supervisorReviewOutputs = {
+          storyContext: state.story,
+          estimation: estimation,
+          decomposition: decomposition,
+          solutionDesign: solutionDesign, // NEW: Add solution design to supervisor's context
+          code: commitFiles,
+          tests: tests,
+          git: prUrl
+      };
+
+      // Conditionally remove solutionDesign from context if it was skipped/not generated
+      if (!solutionDesign) {
+          delete supervisorReviewOutputs.solutionDesign;
+      }
       prompt = [
         {
           role: 'system',
@@ -227,6 +278,7 @@ export function getPrompt(agentName, state) {
             Your role is to REVIEW outputs from sub-agents and validate them.
             Check decomposition (FE, BE, Shared, Risks present, non-empty, relevant).
             Check estimation (numeric effort/time breakdown).
+            Check solutionDesign (if present) → Is the design detailed, comprehensive, and diagrams correctly included if requested? If 'solutionDesign' is null/undefined in the context, it means this step was skipped and does not need review.
             Check code (aligned with decomposition tasks).
             Check tests (cover acceptance criteria).
             Check git (branch/commit info, PR URL).
@@ -240,14 +292,7 @@ export function getPrompt(agentName, state) {
             ` + baseContext // Supervisor doesn't explicitly need images in prompt.
         },
         {
-            role: 'user', content: JSON.stringify({
-                storyContext: state.story,
-                estimation: estimation,
-                decomposition: decomposition,
-                code: commitFiles,
-                tests: tests,
-                git: prUrl
-            }, null, 2)
+            role: 'user', content: JSON.stringify(supervisorReviewOutputs, null, 2)
         }
       ];
       logger.info(`Generated prompt for agent: ${agentName}\n${JSON.stringify(prompt, null, 2)}`);
