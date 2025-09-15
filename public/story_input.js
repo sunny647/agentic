@@ -66,6 +66,16 @@ document.getElementById('jiraForm').addEventListener('submit', async function(e)
   resultDiv.style.display = 'block';
   resultDiv.innerHTML = '<div class="spinner" role="status" aria-live="polite" aria-label="Loading"></div>';
 
+  // Add animated shadow to the card
+  const jiraCard = document.querySelector('.jira-card');
+  jiraCard.classList.add('processing');
+
+  // Disable submit button during processing
+  const submitBtn = document.querySelector('.jira-submit-btn');
+  submitBtn.disabled = true;
+  submitBtn.style.opacity = '0.7';
+  submitBtn.style.cursor = 'not-allowed';
+
   const key = document.getElementById('key').value;
   const summary = document.getElementById('summary').value;
   const description = document.getElementById('description').value;
@@ -113,5 +123,11 @@ document.getElementById('jiraForm').addEventListener('submit', async function(e)
     resultDiv.innerHTML = html;
   } catch (err) {
     resultDiv.innerHTML = '<div class="error-message">Error loading result.</div>';
+  } finally {
+    // Remove animated shadow and re-enable submit button
+    jiraCard.classList.remove('processing');
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '';
+    submitBtn.style.cursor = '';
   }
 });
