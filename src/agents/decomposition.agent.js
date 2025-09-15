@@ -1,6 +1,6 @@
 // src/agents/decomposition.agent.js
 import { smallModel } from '../llm/models.js';
-import { getContext } from '../context/context.manager.js';
+// import { getContext } from '../context/context.manager.js';
 import { jiraTools } from '../services/jiraTools.js';
 import logger from '../logger.js';
 import { getPrompt, DecompositionOutputSchema } from '../prompts/prompt.manager.js'; // NEW: Import getPrompt and Schema
@@ -17,10 +17,10 @@ export async function decompositionAgent(state) {
   logger.info({ state }, 'decompositionAgent full state');
 
   // FIX: Call getContext inside the agent as it's async and returns relevant docs.
-  const ctx = await getContext('decomposition', state);
+  // const ctx = await getContext('decomposition', state);
   // Ensure ctx.documents is part of state for the prompt manager if needed there, or pass it explicitly.
   // For now, prompt manager uses state.contextJson; if ctx.documents is needed, either add to state or pass to getPrompt
-  state.contextDocs = ctx.documents; // Temporarily add to state for prompt manager if needed
+  // state.contextDocs = ctx.documents; // Temporarily add to state for prompt manager if needed
 
 
   // Use the prompt manager to get the messages
