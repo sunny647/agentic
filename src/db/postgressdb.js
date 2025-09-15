@@ -3,11 +3,11 @@ import pkg from "pg";
 const { Pool } = pkg;
 
 export const pool = new Pool({
-  user: "youruser",
-  host: "localhost",
-  database: "radar",
-  password: "yourpassword",
-  port: 5432,
+  user: process.env.PGUSER || "youruser",
+  host: process.env.PGHOST || "localhost",
+  database: process.env.PGDATABASE || "radar",
+  password: process.env.PGPASSWORD || "yourpassword",
+  port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
 });
 
 // Helper query function
