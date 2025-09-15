@@ -10,15 +10,10 @@ function renderLogs(logs) {
     <div class="logs-title">Pipeline Logs</div>
     <ul class="logs-list">
       ${logs.map(log => {
-        // Try to detect supervisor log JSON and simplify
-        if (typeof log === 'string') {
-          try {
-            const parsed = JSON.parse(log);
-            if (parsed && parsed.agent === 'supervisor' && parsed.status) {
-              // Show only status (ok or error)
-              return `<li><b>Supervisor:</b> <span style="color:${parsed.status === 'ok' ? '#00c2b2' : '#ff6b6b'}">${parsed.status}</span></li>`;
-            }
-          } catch (e) { /* not JSON, show as is */ }
+        // Supervisor log: supervisor:status:ok or supervisor:status:error
+        if (typeof log === 'string' && log.startsWith('supervisor:status:')) {
+          const status = log.split(':')[2];
+          return `<li><b>Supervisor:</b> <span style="color:${status === 'ok' ? '#00c2b2' : '#ff6b6b'}">${status}</span></li>`;
         }
         return `<li>${log}</li>`;
       }).join('')}

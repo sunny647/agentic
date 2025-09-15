@@ -26,7 +26,6 @@ export async function supervisorAgent(state) {
   // Use the prompt manager to get the messages for the supervisor
   const messages = getPrompt('supervisorAgent', state); // getPrompt will construct the review content
 
-
   const response = await client.chat.completions.create({
     model: "gpt-4o-mini", // Use gpt-4o-mini for supervisor
     temperature: 0,
@@ -49,9 +48,12 @@ export async function supervisorAgent(state) {
     };
   }
 
+  // --- LOG: Only log simplified status for supervisor ---
+  const supervisorLog = `supervisor:status:${supervisorDecision.status}`;
+
   return {
     ...state,
     supervisorDecision,
-    logs: [...logs, `supervisor:review:${JSON.stringify(supervisorDecision)}`]
+    logs: [...logs, supervisorLog]
   };
 }
