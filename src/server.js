@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import './setupEnv.js';
 import storyRouter from './web/story.routes.js';
+import authRouter from './web/auth.routes.js';
 
 const app = express();
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
@@ -16,6 +17,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Serve login.html at /login
+app.get('/login', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/login.html'));
+});
+
 // Serve story_input.html from public directory
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/story_input.html'));
@@ -23,6 +29,7 @@ app.get('/', (_req, res) => {
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/story', storyRouter);
+app.use('/api/auth', authRouter);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
