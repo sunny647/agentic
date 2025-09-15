@@ -1,6 +1,6 @@
 // src/prompts/prompt.manager.js
 import { z } from "zod"; // Assuming schemas are defined here or imported
-
+import logger from '../logger.js';
 // --- Define Schemas if not already imported elsewhere ---
 // For testing agent
 const GherkinStepSchema = z.string().describe("A single Gherkin step (Given, When, Then, And, But).");
@@ -81,10 +81,11 @@ export function getPrompt(agentName, state) {
     parts.push({ type: 'text', text: '\n\nOutput:' }); // Final explicit output instruction
     return parts;
   };
-
+  var prompt = [];
   switch (agentName) {
     case 'enrichmentAgent':
-      return [
+      logger.info(`Generating prompt for agent: ${agentName}`);
+      prompt = [
         {
           role: 'system',
           content:
@@ -95,8 +96,11 @@ export function getPrompt(agentName, state) {
         },
         { role: 'user', content: userContentPartsWithImages(state.story) },
       ];
+      logger.info(`Generated prompt for agent: ${agentName}\n${JSON.stringify(prompt, null, 2)}`);
+      return prompt;
 
     case 'estimationAgent':
+      logger.info(`Generating prompt for agent: ${agentName}`);
       const codingTasksSummary = (state.codingTasks || []).map(task => `${task.type}: ${task.task}`).join('\n- ');
       const acceptanceCriteriaList = (state.context?.acceptanceCriteria || []).join('\n- '); // Access from state.context
 
@@ -104,8 +108,8 @@ export function getPrompt(agentName, state) {
         `Story: ${state.enrichedStory || state.story}` +
         (acceptanceCriteriaList ? `\n\nAcceptance Criteria:\n- ${acceptanceCriteriaList}` : '') +
         (codingTasksSummary ? `\n\nIdentified Coding Tasks:\n- ${codingTasksSummary}` : '');
-
-      return [
+      
+      prompt = [
         {
           role: 'system',
           content:
@@ -118,18 +122,21 @@ export function getPrompt(agentName, state) {
         },
         { role: 'user', content: userContentPartsWithImages(estimationMainText) }
       ];
+      
+      logger.info(`Generated prompt for agent: ${agentName}\n${JSON.stringify(prompt, null, 2)}`);
+
+      return prompt;
 
     case 'decompositionAgent':
       // const ctx = await getContext('decomposition', state); // getContext should be called inside the agent if it's async
-
+      logger.info(`Generating prompt for agent: ${agentName}`);
       const decompositionMainText = JSON.stringify({
         story: state.enrichedStory || state.story,
         acceptanceCriteria: state.context?.acceptanceCriteria || [], // Access from state.context
         // contextDocs: ctx.documents, // This would be passed if getContext was run here
         // projectFileMetadataJson: state.projectFileMetadataJson // already in baseContext
       }, null, 2);
-
-      return [
+      prompt = [
         {
           role: 'system',
           content:
@@ -140,8 +147,11 @@ export function getPrompt(agentName, state) {
         },
         { role: 'user', content: userContentPartsWithImages(decompositionMainText) }
       ];
+      logger.info(`Generated prompt for agent: ${agentName}\n${JSON.stringify(prompt, null, 2)}`);
+      return prompt;
 
     case 'codingAgent':
+      logger.info(`Generating prompt for agent: ${agentName}`);
       const decompositionTasks = [
         ...(state.decomposition?.feTasks || []),
         ...(state.decomposition?.beTasks || []),
@@ -155,8 +165,8 @@ export function getPrompt(agentName, state) {
         `User Story: ${state.enrichedStory || state.story}\n\n` +
         `Decomposed Technical Tasks with Solution Approaches:\n${formattedTasks}\n\n` +
         `Based on the above, provide the JSON object for the required file changes. If no files need to be changed, return an empty object for 'files'.`;
-
-      return [
+        
+      prompt = [
         {
           role: 'system',
           content:
@@ -170,8 +180,11 @@ export function getPrompt(agentName, state) {
         },
         { role: 'user', content: userContentPartsWithImages(codingMainText) }
       ];
+      logger.info(`Generated prompt for agent: ${agentName}\n${JSON.stringify(prompt, null, 2)}`);
+      return prompt;
 
     case 'testingAgent':
+      logger.info(`Generating prompt for agent: ${agentName}`);
       const testDecompositionTasks = [
         ...(state.decomposition?.feTasks || []),
         ...(state.decomposition?.beTasks || []),
@@ -189,7 +202,7 @@ export function getPrompt(agentName, state) {
         (testFormattedTasks ? `\n\nDecomposed Tasks:\n${testFormattedTasks}` : '') +
         (testIdentifiedRisksList ? `\n\nIdentified Risks:\n- ${testIdentifiedRisksList}` : '');
 
-      return [
+      prompt = [
         {
           role: 'system',
           content:
@@ -200,10 +213,13 @@ export function getPrompt(agentName, state) {
         },
         { role: 'user', content: userContentPartsWithImages(testingMainText) }
       ];
+      logger.info(`Generated prompt for agent: ${agentName}\n${JSON.stringify(prompt, null, 2)}`);
+      return prompt;
 
     case 'supervisorAgent':
+      logger.info(`Generating prompt for agent: ${agentName}`);
       const { estimation, decomposition, tests, commitFiles, prUrl } = state;
-      return [
+      prompt = [
         {
           role: 'system',
           content:
@@ -234,6 +250,8 @@ export function getPrompt(agentName, state) {
             }, null, 2)
         }
       ];
+      logger.info(`Generated prompt for agent: ${agentName}\n${JSON.stringify(prompt, null, 2)}`);
+      return prompt;
 
     default:
       throw new Error(`Unknown agent: ${agentName}`);

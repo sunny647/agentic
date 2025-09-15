@@ -3,7 +3,6 @@ import { smallModel } from '../llm/models.js';
 import { getContext } from '../context/context.manager.js';
 import { jiraTools } from '../services/jiraTools.js';
 import logger from '../logger.js';
-import { z } from "zod";
 import { getPrompt, DecompositionOutputSchema } from '../prompts/prompt.manager.js'; // NEW: Import getPrompt and Schema
 
 
