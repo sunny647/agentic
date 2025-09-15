@@ -42,13 +42,6 @@
     ]
   },
   {
-    "path": "src/agents/git.agent.js",
-    "name": "git.agent.js",
-    "functions": [
-      "gitAgent(state): Generates code diffs or file contents for each subtask from decomposition. Returns a mapping of subtask to generated code as { files, notes }."
-    ]
-  },
-  {
     "path": "src/graph/pipeline.js",
     "name": "pipeline.js",
     "functions": [
@@ -135,6 +128,20 @@
     "name": "story_input.html",
     "functions": [
       "Web UI for story input."
+    ]
+  },
+  {
+    "path": "public/story_input.css",
+    "name": "story_input.css",
+    "functions": [
+      "Styles for story input UI."
+    ]
+  },
+  {
+    "path": "public/story_input.js",
+    "name": "story_input.js",
+    "functions": [
+      "JavaScript for story input UI."
     ]
   },
   {

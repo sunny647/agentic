@@ -2,26 +2,33 @@
 	"project": "SprintPilot",
 	"description": "SprintPilot is a modular, multi-agent pipeline for automated story decomposition, estimation, code generation, and testing, orchestrated via LangGraph and powered by LLMs.",
 	"tech_stack": {
-		"frontend": "React, HTML, jQuery, javascript, css",
-		"backend": "Node.js, Express, ChromaDB, Postgres",
+		"frontend": "HTML, jQuery, javascript, css",
+		"backend": "Node.js, javascript, expressjs, ChromaDB, postgressdb",
 		"llm": "OpenAI",
         "framework": "LangChain, LangGraph"
 	},
     "dependencies": {
         "@chroma-core/default-embed": "^0.1.8",
-        "@langchain/core": "^0.3.72",
-        "@langchain/langgraph": "^0.4.6",
-        "@langchain/langgraph-supervisor": "^0.0.18",
-        "@langchain/openai": "^0.6.9",
-        "chromadb": "^3.0.14",
-        "dotenv": "^17.2.1",
-        "express": "^5.1.0",
-        "openai": "^5.15.0",
-        "pg": "^8.16.3",
-        "pino": "^9.9.0",
-        "pino-http": "^10.5.0",
-        "uuid": "^11.1.0",
-        "zod": "^4.1.1"
+		"@langchain/core": "^0.3.72",
+		"@langchain/langgraph": "^0.4.6",
+		"@langchain/langgraph-supervisor": "^0.0.18",
+		"@langchain/openai": "^0.6.9",
+		"@octokit/rest": "^22.0.0",
+		"axios": "^1.12.0",
+		"chromadb": "^3.0.14",
+		"diff": "^8.0.2",
+		"dotenv": "^17.2.1",
+		"express": "^5.1.0",
+		"form-data": "^4.0.4",
+		"jira-client": "^8.2.2",
+		"langchain": "^0.3.33",
+		"octokit": "^5.0.3",
+		"openai": "^5.15.0",
+		"pg": "^8.16.3",
+		"pino": "^9.9.0",
+		"pino-http": "^10.5.0",
+		"uuid": "^11.1.0",
+		"zod": "^3.25.76"
     },
     "core_modules": {
 		"graph": {
@@ -46,7 +53,6 @@
 					"estimationAgent",
 					"codingAgent",
 					"testingAgent",
-					"gitAgent",
 					"supervisorAgent"
 				],
 				"conditional_edges": "Supervisor can route back to any agent for revision."
@@ -97,12 +103,6 @@
 				"input": "code, enrichedStory, acceptanceCriteria",
 				"output": "tests"
 			},
-			"git.agent.js": {
-				"role": "DevOps Engineer",
-				"function": "Generates code diffs or file contents for each subtask from decomposition. Returns a mapping of subtask to generated code.",
-				"input": "decomposition (feTasks, beTasks, sharedTasks)",
-				"output": "git: { files, notes }"
-			},
 			"supervisor.agent.js": {
 				"role": "Supervisor/Reviewer",
 				"function": "Validates outputs, provides feedback, and can route workflow back for revision.",
@@ -137,8 +137,8 @@
 		],
 		"features": [
 			"story_input.html",
-			"client-side scripts",
-			"stylesheets"
+			"story_input.js",
+			"story_input.css"
 		]
 	},
 	"train": {
