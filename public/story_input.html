@@ -15,7 +15,7 @@
       <span class="jira-subtitle">Agentic SDLC</span>
     </div>
     <div class="jira-main-title">Submit Story for Agentic Software Development Life Cycle</div>
-    <form id="jiraForm" autocomplete="off">
+    <form id="jiraForm" autocomplete="off" enctype="multipart/form-data">
       <div class="jira-fields-row">
         <div class="jira-field">
           <label for="key">Issue Key</label>
@@ -29,6 +29,11 @@
       <div class="jira-field jira-description">
         <label for="description">Description</label>
         <textarea id="description" name="description" rows="3" autocomplete="off"></textarea>
+      </div>
+      <div class="jira-field jira-image-upload">
+        <label for="imageUpload">Attach Image (JPG, PNG, max 2MB)</label>
+        <input type="file" id="imageUpload" name="image" accept="image/png, image/jpeg" />
+        <div id="imagePreview" class="image-preview"></div>
       </div>
       <button type="submit" class="jira-submit-btn">Submit</button>
     </form>

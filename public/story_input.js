@@ -10,18 +10,12 @@ function renderLogs(logs) {
     <div class="logs-title">Pipeline Logs</div>
     <ul class="logs-list">
       ${logs.map(log => {
-        // Try to detect supervisor log JSON and simplify
-        if (typeof log === 'string') {
-          try {
-            const parsed = JSON.parse(log);
-            if (parsed && parsed.agent === 'supervisor' && parsed.status) {
-              // Show only status (ok or error)
-              return `<li><b>Supervisor:</b> <span style="color:${parsed.status === 'ok' ? '#00c2b2' : '#ff6b6b'}">${parsed.status}</span></li>`;
-            }
-          } catch (e) { /* not JSON, show as is */ }
-        }
-        return `<li>${log}</li>`;
-      }).join('')}
+    // Try to detect supervisor log JSON and simplify
+    const supMatch = /^supervisor(.*)/.exec(log);
+    if (!supMatch) {
+      return `<li>${log}</li>`;
+    }
+  }).join('')}
     </ul>
   `;
 }
@@ -69,9 +63,36 @@ function validateResponse(data) {
   return true;
 }
 
+// Image preview logic
+const imageInput = document.getElementById('imageUpload');
+const imagePreview = document.getElementById('imagePreview');
+if (imageInput && imagePreview) {
+  imageInput.addEventListener('change', function (e) {
+    imagePreview.innerHTML = '';
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        imagePreview.innerHTML = '<span style="color:#ff6b6b;">Invalid file type. Only JPG/PNG allowed.</span>';
+        imageInput.value = '';
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        imagePreview.innerHTML = '<span style="color:#ff6b6b;">File too large (max 2MB).</span>';
+        imageInput.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        imagePreview.innerHTML = `<img src="${ev.target.result}" alt="Image preview" />`;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
 // Form submission logic
 
-document.getElementById('jiraForm').addEventListener('submit', async function(e) {
+document.getElementById('jiraForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   // Clear the result div when submit is clicked
   const resultDiv = document.getElementById('result');
@@ -92,24 +113,58 @@ document.getElementById('jiraForm').addEventListener('submit', async function(e)
   const summary = document.getElementById('summary').value;
   const description = document.getElementById('description').value;
 
-  // Construct minimal Jira-like payload
-  const payload = {
-    issue: {
-      key,
-      fields: {
-        summary,
-        description
-      }
-    }
-  };
+  // Handle image file
+  const imageFile = imageInput && imageInput.files && imageInput.files[0] ? imageInput.files[0] : null;
 
+  // If image is present, use FormData, else send JSON
+  let res, data;
+  const jiraImagesPayload = [];
   try {
-    const res = await fetch('/api/story/run', {
+    if (imageFile) {
+      // Handle image file input from frontend
+      // Validate image (defensive)
+      if (!['image/jpeg', 'image/png'].includes(imageFile.type) || imageFile.size > 2 * 1024 * 1024) {
+        resultDiv.innerHTML = '<div class="error-message">Invalid image file (type/size).</div>';
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '';
+        submitBtn.style.cursor = '';
+        if (jiraCard) jiraCard.classList.remove('processing');
+        return;
+      }
+
+      // Read file as Data URL (Base64)
+      const reader = new FileReader();
+      reader.readAsDataURL(imageFile);
+
+      await new Promise((resolve) => { // Use a promise to await file reading
+        reader.onloadend = function () {
+          jiraImagesPayload.push({
+            filename: imageFile.name,
+            base64: reader.result // Base64 data URI
+          });
+          resolve();
+        };
+      });
+
+      // Construct the JSON payload (always JSON now)
+
+    }
+    const payload = {
+      issue: {
+        key,
+        fields: {
+          summary,
+          description,
+          jiraImages: jiraImagesPayload,
+        }
+      }
+    };
+    res = await fetch('/api/story/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    const data = await res.json();
+    data = await res.json();
     if (!validateResponse(data)) {
       resultDiv.innerHTML = '<div class="error-message">Unexpected API response structure.</div>' +
         '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
@@ -134,6 +189,7 @@ document.getElementById('jiraForm').addEventListener('submit', async function(e)
       JSON.stringify(data, null, 2) + '</pre></details>';
     resultDiv.innerHTML = html;
   } catch (err) {
+    console/log(err);
     resultDiv.innerHTML = '<div class="error-message">Error loading result.</div>';
   } finally {
     // Remove animated shadow and re-enable submit button
