@@ -205,6 +205,44 @@ textarea:focus {
   border-color: var(--primary-dark);
   background: #23213a;
 }
+.jira-image-upload {
+  margin-bottom: 0.7em;
+}
+input[type=file] {
+  background: #23243a;
+  color: #fff;
+  border: 1.5px solid #393a4a;
+  border-radius: 10px;
+  font-size: var(--font-size-md);
+  font-family: inherit;
+  padding: 0.7em 1em;
+  margin-bottom: 0.1em;
+  transition: background var(--transition), color var(--transition), border var(--transition);
+  outline: none;
+  box-shadow: none;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+input[type=file]:focus {
+  border-color: var(--primary);
+  background: #23213a;
+}
+.image-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-top: 0.5em;
+}
+.preview-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1.5px solid #a78bfa44;
+  box-shadow: 0 1px 4px #0002;
+  background: #23243a;
+}
 .jira-submit-btn {
   margin-top: 1.5em;
   padding: 1em 0;

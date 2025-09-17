@@ -69,6 +69,28 @@ function validateResponse(data) {
   return true;
 }
 
+// Image preview logic
+const imageInput = document.getElementById('images');
+const imagePreview = document.getElementById('imagePreview');
+if (imageInput && imagePreview) {
+  imageInput.addEventListener('change', function () {
+    imagePreview.innerHTML = '';
+    const files = Array.from(imageInput.files);
+    files.forEach(file => {
+      if (!file.type.match('image.*')) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.alt = file.name;
+        img.className = 'preview-thumb';
+        imagePreview.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+}
+
 // Form submission logic
 
 document.getElementById('jiraForm').addEventListener('submit', async function(e) {
@@ -92,6 +114,54 @@ document.getElementById('jiraForm').addEventListener('submit', async function(e)
   const summary = document.getElementById('summary').value;
   const description = document.getElementById('description').value;
 
+  // Handle image files
+  const imagesInput = document.getElementById('images');
+  const files = imagesInput && imagesInput.files ? Array.from(imagesInput.files) : [];
+  // Only allow up to 5 images, each up to 5MB
+  const maxFiles = 5;
+  const maxSize = 5 * 1024 * 1024;
+  if (files.length > maxFiles) {
+    resultDiv.innerHTML = `<div class="error-message">You can upload up to ${maxFiles} images only.</div>`;
+    jiraCard.classList.remove('processing');
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '';
+    submitBtn.style.cursor = '';
+    return;
+  }
+  for (const file of files) {
+    if (file.size > maxSize) {
+      resultDiv.innerHTML = `<div class="error-message">Image ${file.name} exceeds 5MB size limit.</div>`;
+      jiraCard.classList.remove('processing');
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '';
+      submitBtn.style.cursor = '';
+      return;
+    }
+    if (!file.type.match('image/(jpeg|png)')) {
+      resultDiv.innerHTML = `<div class="error-message">Only JPG and PNG images are supported.</div>`;
+      jiraCard.classList.remove('processing');
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '';
+      submitBtn.style.cursor = '';
+      return;
+    }
+  }
+
+  // Read images as base64
+  const readImagesAsBase64 = files.map(file => {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        resolve({ filename: file.name, base64: e.target.result });
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+  let jiraImages = [];
+  if (readImagesAsBase64.length > 0) {
+    jiraImages = await Promise.all(readImagesAsBase64);
+  }
+
   // Construct minimal Jira-like payload
   const payload = {
     issue: {
@@ -100,7 +170,8 @@ document.getElementById('jiraForm').addEventListener('submit', async function(e)
         summary,
         description
       }
-    }
+    },
+    jiraImages
   };
 
   try {
