@@ -7,8 +7,8 @@ import './setupEnv.js';
 import storyRouter from './web/story.routes.js';
 
 const app = express();
+app.use(express.json({ limit: '3mb' }));
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
-app.use(express.json({ limit: '1mb' }));
 app.use(pinoHttp({ logger }));
 
 // Serve static assets from public directory
