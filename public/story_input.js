@@ -69,6 +69,33 @@ function validateResponse(data) {
   return true;
 }
 
+// Image preview logic
+const imageInput = document.getElementById('imageUpload');
+const imagePreview = document.getElementById('imagePreview');
+if (imageInput && imagePreview) {
+  imageInput.addEventListener('change', function (e) {
+    imagePreview.innerHTML = '';
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        imagePreview.innerHTML = '<span style="color:#ff6b6b;">Invalid file type. Only JPG/PNG allowed.</span>';
+        imageInput.value = '';
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        imagePreview.innerHTML = '<span style="color:#ff6b6b;">File too large (max 2MB).</span>';
+        imageInput.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        imagePreview.innerHTML = `<img src="${ev.target.result}" alt="Image preview" />`;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
 // Form submission logic
 
 document.getElementById('jiraForm').addEventListener('submit', async function(e) {
@@ -92,24 +119,45 @@ document.getElementById('jiraForm').addEventListener('submit', async function(e)
   const summary = document.getElementById('summary').value;
   const description = document.getElementById('description').value;
 
-  // Construct minimal Jira-like payload
-  const payload = {
-    issue: {
-      key,
-      fields: {
-        summary,
-        description
-      }
-    }
-  };
+  // Handle image file
+  const imageFile = imageInput && imageInput.files && imageInput.files[0] ? imageInput.files[0] : null;
 
+  // If image is present, use FormData, else send JSON
+  let res, data;
   try {
-    const res = await fetch('/api/story/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
+    if (imageFile) {
+      // Validate again (defensive)
+      if (!['image/jpeg', 'image/png'].includes(imageFile.type) || imageFile.size > 2 * 1024 * 1024) {
+        resultDiv.innerHTML = '<div class="error-message">Invalid image file.</div>';
+        return;
+      }
+      const formData = new FormData();
+      formData.append('key', key);
+      formData.append('summary', summary);
+      formData.append('description', description);
+      formData.append('image', imageFile);
+      res = await fetch('/api/story/run', {
+        method: 'POST',
+        body: formData
+      });
+    } else {
+      // Construct minimal Jira-like payload
+      const payload = {
+        issue: {
+          key,
+          fields: {
+            summary,
+            description
+          }
+        }
+      };
+      res = await fetch('/api/story/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+    data = await res.json();
     if (!validateResponse(data)) {
       resultDiv.innerHTML = '<div class="error-message">Unexpected API response structure.</div>' +
         '<pre>' + JSON.stringify(data, null, 2) + '</pre>';

@@ -20,3 +20,21 @@ export async function queryDB(query, params = []) {
     client.release();
   }
 }
+
+// Migration: create story_images table if not exists
+export async function ensureImageTable() {
+  await queryDB(`
+    CREATE TABLE IF NOT EXISTS story_images (
+      id SERIAL PRIMARY KEY,
+      issue_key VARCHAR(64) NOT NULL,
+      filename VARCHAR(255) NOT NULL,
+      originalname VARCHAR(255),
+      mimetype VARCHAR(64),
+      size INTEGER,
+      path VARCHAR(512),
+      uploaded_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+// Call on startup
+ensureImageTable();

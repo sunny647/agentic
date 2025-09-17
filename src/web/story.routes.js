@@ -2,97 +2,94 @@ import { Router } from 'express';
 import { runPipeline } from '../graph/pipeline.js';
 import { v4 as uuid } from 'uuid';
 import logger from '../logger.js';
-import { jiraTools, fetchImageAsBase64 } from '../services/jiraTools.js'; // Import new helpers
+import multer from 'multer';
+import path from 'path';
+import { queryDB } from '../db/postgressdb.js';
+
+// Multer setup for image upload
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(process.cwd(), 'uploads'));
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_'));
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPG and PNG images are allowed'));
+    }
+  }
+});
 
 const router = Router();
 
 /**
  * POST /api/story/run
- * body: { story?: string, jiraKey?: string, jiraImages?: string[], descriptionAdf?: object }
+ * Accepts either JSON or multipart/form-data (for image upload)
  */
-router.post('/run', async (req, res) => {
+router.post('/run', upload.single('image'), async (req, res) => {
   try {
-    console.log("Inside /run endpoint");
-    console.log("Request body:", req.body);
-    logger.info({ body: req.body }, 'Received /run request with body');
+    logger.info({ body: req.body, file: req.file }, 'Received /run request with body and file');
     const requestId = uuid();
-    // Validate that the request body is JSON and not empty
-    if (!req.is('application/json')) {
-      logger.warn('Request content-type is not application/json');
-      return res.status(415).json({ error: 'Content-Type must be application/json' });
-    }
-    if (!req.body || Object.keys(req.body).length === 0) {
-      logger.warn('Empty request body');
-      return res.status(400).json({ error: 'Request body cannot be empty' });
-    }
-    const { issue, story, jiraKey, jiraImages, descriptionAdf } = req.body || {};
-
-    let storyText;
-    let extractedJiraKey = jiraKey;
-    if (issue && issue.fields) {
-      const { summary, description } = issue.fields;
-      const key = issue.key;
-      // Allow summary and description to be optional
-      if (summary || description) {
-        storyText = `${summary ? summary + ': ' : ''}${description || ''}`.trim();
-      } else {
-        storyText = '';
-      }
-      if (key) {
-        extractedJiraKey = key;
-      }
+    let key, summary, description, imageMeta = null;
+    // If multipart/form-data (image upload)
+    if (req.file) {
+      key = req.body.key;
+      summary = req.body.summary;
+      description = req.body.description;
+      imageMeta = {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path
+      };
+      // Store image metadata in DB
+      await queryDB(
+        'INSERT INTO story_images (issue_key, filename, originalname, mimetype, size, path, uploaded_at) VALUES ($1, $2, $3, $4, $5, $6, NOW())',
+        [key, imageMeta.filename, imageMeta.originalname, imageMeta.mimetype, imageMeta.size, imageMeta.path]
+      );
     } else {
-      storyText = typeof story === 'object' && story?.description ? story.description : story;
+      // JSON body
+      if (!req.is('application/json')) {
+        logger.warn('Request content-type is not application/json');
+        return res.status(415).json({ error: 'Content-Type must be application/json or multipart/form-data' });
+      }
+      if (!req.body || Object.keys(req.body).length === 0) {
+        logger.warn('Empty request body');
+        return res.status(400).json({ error: 'Request body cannot be empty' });
+      }
+      const { issue } = req.body || {};
+      if (issue && issue.fields) {
+        key = issue.key;
+        summary = issue.fields.summary;
+        description = issue.fields.description;
+      }
     }
-    // If you want, fetch Jira here (left minimal to keep demo self-contained)
-    if ((!storyText || storyText === '') && extractedJiraKey) {
-      storyText = `Jira ${extractedJiraKey}: (Jira integration disabled in demo).`;
-    }
-
-    if (!extractedJiraKey) {
+    if (!key) {
       logger.warn('No issue key provided');
       return res.status(400).json({ error: 'issue key is required' });
     }
-    if (!storyText) {
-      logger.warn('No story text provided, using fallback.');
-      // storyText will be empty string if both summary and description are missing, but we allow this now
-      // Optionally, you could set a default/fallback here if needed
-    }
-
-    let resolvedImages = jiraImages || [];
-    let resolvedDescriptionAdf = descriptionAdf || null;
-    // If we have a Jira key but no images or description ADF, try to fetch them
-    if (extractedJiraKey && !jiraImages && !descriptionAdf) {
-      // If only issueID is provided, try to fetch fresh data
-      const fetchedIssue = await jiraTools.getIssue.execute({ issueId: extractedJiraKey });
-      console.log("Fetched Issue:", fetchedIssue);
-      if (fetchedIssue.error) {
-      throw new Error(fetchedIssue.error);
-      }
-      resolvedDescriptionAdf = fetchedIssue.descriptionAdf;
-      console.log("Resolved Description ADF:", resolvedDescriptionAdf);
-
-      const extractedUrls = fetchedIssue.extractedImageUrls || [];
-      console.log("Extracted Image URLs from fetched issue:", extractedUrls);
-
-      // Fetch and convert images to Base64
-      for (const { url, filename } of extractedUrls) {
-        const base64 = await fetchImageAsBase64(url, extractedJiraKey);
-        if (base64) {
-          resolvedImages.push({ url, base64, filename });
-        }
-      }
-    }
-
-    logger.info({ storyText }, 'Starting pipeline with story');
+    // Compose story text
+    let storyText = `${summary ? summary + ': ' : ''}${description || ''}`.trim();
+    // Retrieve image metadata for this issue
+    const images = await queryDB('SELECT id, filename, originalname, mimetype, size FROM story_images WHERE issue_key = $1', [key]);
+    logger.info({ storyText, images }, 'Starting pipeline with story and images');
     let output;
     try {
-      output = await runPipeline({ requestId, story: storyText, issueID: extractedJiraKey, jiraImages: resolvedImages });
+      output = await runPipeline({ requestId, story: storyText, issueID: key, images });
     } catch (pipelineErr) {
       logger.error({ pipelineErr }, 'Pipeline execution error');
       return res.status(500).json({ error: pipelineErr.message, stack: pipelineErr.stack });
     }
-    res.json({ requestId, output });
+    res.json({ requestId, output, images });
   } catch (err) {
     logger.error({ err }, 'Pipeline error');
     // Defensive: ensure error message is always a string
@@ -101,50 +98,15 @@ router.post('/run', async (req, res) => {
   }
 });
 
-// Webhook endpoint for Jira
-router.post('/webhook', async (req, res) => {
-  try {
-    logger.info({ body: req.body }, 'Received Jira webhook');
-    if (!req.is('application/json')) {
-      logger.warn('Webhook content-type is not application/json');
-      return res.status(415).json({ error: 'Content-Type must be application/json' });
+// Endpoint to retrieve image by filename
+router.get('/image/:filename', async (req, res) => {
+  const { filename } = req.params;
+  const filePath = path.join(process.cwd(), 'uploads', filename);
+  res.sendFile(filePath, err => {
+    if (err) {
+      res.status(404).json({ error: 'Image not found' });
     }
-    if (!req.body || Object.keys(req.body).length === 0) {
-      logger.warn('Empty webhook body');
-      return res.status(400).json({ error: 'Webhook body cannot be empty' });
-    }
-    // Basic validation for Jira webhook payload
-    const { issue } = req.body;
-    if (!issue || !issue.fields) {
-      logger.warn('Webhook missing issue or fields');
-      return res.status(400).json({ error: 'Invalid webhook payload: missing issue/fields' });
-    }
-    const { summary, description } = issue.fields;
-    const key = issue.key;
-    // Allow summary and description to be optional
-    let storyText = '';
-    if (summary || description) {
-      storyText = `${summary ? summary + ': ' : ''}${description || ''}`.trim();
-    }
-    if (!key) {
-      logger.warn('Webhook missing issue key');
-      return res.status(400).json({ error: 'Webhook missing issue key' });
-    }
-    // If both summary and description are missing, storyText will be empty string, which is now allowed
-    const requestId = uuid();
-    let output;
-    try {
-      output = await runPipeline({ requestId, story: storyText, issueID: key });
-    } catch (pipelineErr) {
-      logger.error({ pipelineErr }, 'Pipeline execution error (webhook)');
-      return res.status(500).json({ error: pipelineErr.message, stack: pipelineErr.stack });
-    }
-    res.json({ requestId, output });
-  } catch (err) {
-    logger.error({ err }, 'Webhook processing error');
-    const errorMessage = err && err.message ? err.message : 'Unknown server error';
-    res.status(500).json({ error: errorMessage, stack: err && err.stack ? err.stack : undefined });
-  }
+  });
 });
 
 export default router;
