@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PixelPilot Trigger</title>
+  <link rel="stylesheet" href="story_input.css">
+  <style>
+    body { font-family: Inter, Arial, sans-serif; background: #f7f8fa; margin: 0; padding: 0; }
+    .container { max-width: 480px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #0001; padding: 32px; }
+    h2 { margin-top: 0; }
+    label { display: block; margin: 16px 0 8px; font-weight: 500; }
+    input, textarea { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 16px; }
+    button { background: #4f46e5; color: #fff; border: none; border-radius: 6px; padding: 10px 24px; font-size: 1rem; cursor: pointer; }
+    .result { margin-top: 24px; background: #f0f4ff; border-radius: 8px; padding: 16px; }
+    .error { color: #c00; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Trigger PixelPilot Extraction</h2>
+    <form id="pixelpilotForm">
+      <label for="url">Site URL</label>
+      <input type="url" id="url" name="url" placeholder="https://your-site.com/page" required>
+      <label for="figmaUrl">Figma URL (optional)</label>
+      <input type="url" id="figmaUrl" name="figmaUrl" placeholder="https://www.figma.com/file/...">
+      <button type="submit">Run PixelPilot</button>
+    </form>
+    <div id="result" class="result" style="display:none;"></div>
+    <div id="error" class="error"></div>
+  </div>
+  <script>
+    document.getElementById('pixelpilotForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('error').textContent = '';
+      const url = document.getElementById('url').value;
+      const figmaUrl = document.getElementById('figmaUrl').value;
+      try {
+        const res = await fetch('/api/story/run-pixelpilot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, figmaUrl })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unknown error');
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('result').innerHTML = `<b>Site Extraction Output:</b> <pre>${JSON.stringify(data.outFile, null, 2)}</pre>` +
+          (data.figmaOutFile ? `<b>Figma Extraction Output:</b> <pre>${JSON.stringify(data.figmaOutFile, null, 2)}</pre>` : '');
+      } catch (err) {
+        document.getElementById('error').textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>

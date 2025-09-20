@@ -1,3 +1,5 @@
+import { runSiteExtraction } from '../figma/site-extractor.js';
+import { runFigmaFetch } from '../figma/figma-fetch.js';
 import { Router } from 'express';
 import { runPipeline } from '../graph/pipeline.js';
 import { v4 as uuid } from 'uuid';
@@ -5,6 +7,30 @@ import logger from '../logger.js';
 import { jiraTools, fetchImageAsBase64 } from '../services/jiraTools.js'; // Import new helpers
 
 const router = Router();
+
+/**
+ * POST /api/story/pixelpilot
+ * body: { url: string, figmaUrl?: string }
+ * Triggers site extraction and then figma fetch, returns both output file paths
+ */
+router.post('/run-pixelpilot', async (req, res) => {
+  try {
+    const { url, figmaUrl } = req.body;
+    if (!url) {
+      return res.status(400).json({ error: 'Missing url in request body' });
+    }
+    const outFile = await runSiteExtraction(url);
+    let figmaOutFile = null;
+    if (figmaUrl) {
+      figmaOutFile = await runFigmaFetch(figmaUrl);
+    }
+    res.json({ outFile, figmaOutFile });
+  } catch (err) {
+    logger.error({ err }, 'Site extraction error');
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 /**
  * POST /api/story/run

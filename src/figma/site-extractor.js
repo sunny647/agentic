@@ -3,11 +3,8 @@
 import { chromium } from 'playwright';
 import fs from 'fs/promises';
 import path from 'path';
-import { mkdirp } from 'mkdirp';
-import minimist from 'minimist';
 
 const MAPPING_FILE = './mapping.json';   // static path
-const OUT_DIR = './artifacts';           // static output folder
 
 function rgbToHex(rgb) {
   const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
@@ -78,9 +75,8 @@ async function extractElement(page, selector) {
   return { el, data };
 }
 
-async function run(url) {
+export async function runSiteExtraction(url) {
   const mapping = JSON.parse(await fs.readFile(MAPPING_FILE, 'utf8'));
-  await mkdirp(OUT_DIR);
 
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
   const context = await browser.newContext();
@@ -88,7 +84,7 @@ async function run(url) {
 
   // Decide how to reach the page
   if (mapping.scenario) {
-    console.log(`▶ Running scenario: ${mapping.scenario}`);
+    console.log(`Running scenario: ${mapping.scenario}`);
     const scenarioPath = path.resolve(mapping.scenario);
     const scenarioFn = (await import(scenarioPath)).default;
     await scenarioFn(page);
@@ -106,9 +102,12 @@ async function run(url) {
   const artifacts = { url, timestamp, mappingSource: MAPPING_FILE, components: [] };
 
   if (mapping.fullPageScreenshot) {
-    const fullPath = path.join(OUT_DIR, `fullpage_${Date.now()}.png`);
-    await page.screenshot({ path: fullPath, fullPage: true });
-    artifacts.fullPageScreenshot = fullPath;
+    try {
+      const buffer = await page.screenshot({ fullPage: true, type: 'png' });
+      artifacts.fullPageScreenshotBase64 = `data:image/png;base64,${Buffer.from(buffer).toString('base64')}`;
+    } catch (e) {
+      console.warn('Full page screenshot failed:', e.message);
+    }
   }
 
   for (const comp of mapping.components || []) {
@@ -124,10 +123,11 @@ async function run(url) {
       continue;
     }
 
-    const safeName = comp.name.replace(/[^a-z0-9\-_.]/gi, '_');
-    const screenshotPath = path.join(OUT_DIR, `${safeName}_${Date.now()}.png`);
+    // Take screenshot as buffer and convert to base64
+    let screenshotBase64 = null;
     try {
-      await extracted.el.screenshot({ path: screenshotPath });
+      const buffer = await extracted.el.screenshot({ type: 'png' });
+      screenshotBase64 = `data:image/png;base64,${Buffer.from(buffer).toString('base64')}`;
     } catch (e) {
       console.warn('Element screenshot failed for', comp.name, e.message);
     }
@@ -144,30 +144,12 @@ async function run(url) {
       selector: sel,
       found: true,
       data: normalized,
-      screenshot: screenshotPath
+      screenshotBase64
     });
   }
 
-  const outFile = path.join(OUT_DIR, `extraction_${Date.now()}.json`);
-  await fs.writeFile(outFile, JSON.stringify(artifacts, null, 2), 'utf8');
+  // const outFile = path.join(OUT_DIR, `extraction_${Date.now()}.json`);
+  // await fs.writeFile(outFile, JSON.stringify(artifacts, null, 2), 'utf8');
   await browser.close();
-  return outFile;
+  return artifacts;
 }
-
-// CLI entry
-const argv = minimist(process.argv.slice(2));
-const url = argv.url || argv.u;
-
-if (!url) {
-  console.error('Usage: node playwright-extractor.js --url=https://your-site/page');
-  process.exit(1);
-}
-
-run(url)
-  .then(outFile => {
-    console.log('Extraction complete:', outFile);
-  })
-  .catch(err => {
-    console.error('Extractor failed:', err);
-    process.exit(2);
-  });

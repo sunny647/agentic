@@ -21,6 +21,11 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/story_input.html'));
 });
 
+// Serve story_input.html from public directory
+app.get('/pixelpilot', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/pixelpilot.html'));
+});
+
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/story', storyRouter);
 

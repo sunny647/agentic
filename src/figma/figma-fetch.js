@@ -64,11 +64,11 @@ function normalizeNode(node) {
     type: node.type,
     bounding: node.absoluteBoundingBox
       ? {
-          x: node.absoluteBoundingBox.x,
-          y: node.absoluteBoundingBox.y,
-          width: node.absoluteBoundingBox.width,
-          height: node.absoluteBoundingBox.height
-        }
+        x: node.absoluteBoundingBox.x,
+        y: node.absoluteBoundingBox.y,
+        width: node.absoluteBoundingBox.width,
+        height: node.absoluteBoundingBox.height
+      }
       : null,
     computed: {
       color: fills.length ? paintToHex(fills[0]) : null,
@@ -96,7 +96,7 @@ async function fetchFigmaScreenshots(fileKey, nodeIds) {
   for (let i = 0; i < nodeIds.length; i += 100) {
     const batch = nodeIds.slice(i, i + 100);
     const idsParam = batch.join(',');
-      const imageUrlsApi = `https://api.figma.com/v1/images/${fileKey}?ids=${idsParam}`;
+    const imageUrlsApi = `https://api.figma.com/v1/images/${fileKey}?ids=${idsParam}`;
     console.log(`Fetching Figma image URLs for nodes for file ${fileKey} : ${idsParam}`);
     const res = await axios.get(imageUrlsApi, {
       headers: { "X-Figma-Token": FIGMA_TOKEN }
@@ -106,9 +106,6 @@ async function fetchFigmaScreenshots(fileKey, nodeIds) {
     }
     console.log("Figma Image API response:", JSON.stringify(res.data, null, 2));
     const { images } = res.data;
-    const outFile = path.join("./artifacts", `figma_raw_images_${Date.now()}.json`);
-  await fs.mkdir("./artifacts", { recursive: true });
-  await fs.writeFile(outFile, JSON.stringify(res.data, null, 2));
     for (const nodeId in images) {
       const imageUrl = images[nodeId];
       console.log(`Image URL for node ${nodeId}:`, imageUrl);
@@ -162,7 +159,7 @@ async function fetchFigma(fileKey, nodeId) {
   return res.data;
 }
 
-async function run(figmaUrl) {
+export async function runFigmaFetch(figmaUrl) {
   const { fileKey, nodeId } = parseFigmaUrl(figmaUrl);
   console.log(`Fetching Figma fileKey=${fileKey}, nodeId=${nodeId}`);
 
@@ -193,21 +190,23 @@ async function run(figmaUrl) {
   }
   nodes.forEach(node => attachScreenshots(node));
 
-  const outFile = path.join("./artifacts", `figma_${Date.now()}.json`);
-  await fs.mkdir("./artifacts", { recursive: true });
-  await fs.writeFile(outFile, JSON.stringify(nodes, null, 2));
-  console.log(`Saved normalized Figma JSON to ${outFile}`);
+  // const outFile = path.join("./artifacts", `figma_${Date.now()}.json`);
+  // await fs.mkdir("./artifacts", { recursive: true });
+  // await fs.writeFile(outFile, JSON.stringify(nodes, null, 2));
+  // console.log(`Saved normalized Figma JSON to ${outFile}`);
+  return nodes;
 }
 
-const argv = minimist(process.argv.slice(2));
-const figmaUrl = argv.url || argv.u;
-
-if (!figmaUrl) {
-  console.error("Usage: node fetchFigma.js --url=https://www.figma.com/file/FILE_KEY/Project?node-id=123-456");
-  process.exit(1);
+// CLI entry for standalone usage
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const argv = minimist(process.argv.slice(2));
+  const figmaUrl = argv.url || argv.u;
+  if (!figmaUrl) {
+    console.error("Usage: node fetchFigma.js --url=https://www.figma.com/file/FILE_KEY/Project?node-id=123-456");
+    process.exit(1);
+  }
+  runFigmaFetch(figmaUrl).catch(err => {
+    console.error("Error:", err);
+    process.exit(1);
+  });
 }
-
-run(figmaUrl).catch(err => {
-  console.error("Error:", err);
-  process.exit(1);
-});
