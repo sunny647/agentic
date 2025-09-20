@@ -83,8 +83,23 @@ async function run(url) {
   await mkdirp(OUT_DIR);
 
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
-  const page = await browser.newPage();
-  await page.goto(url + (mapping.pagePath || ''), { waitUntil: 'networkidle' });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  // Decide how to reach the page
+  if (mapping.scenario) {
+    console.log(`▶ Running scenario: ${mapping.scenario}`);
+    const scenarioPath = path.resolve(mapping.scenario);
+    const scenarioFn = (await import(scenarioPath)).default;
+    await scenarioFn(page);
+  } else if (mapping.pageUrl) {
+    const url = baseUrl + mapping.pageUrl;
+    console.log(`Navigating to ${url}`);
+    await page.goto(url, { waitUntil: "networkidle" });
+  } else {
+    throw new Error("No pageUrl or scenario provided in mapping.json");
+  }
+
   await disableAnimations(page);
 
   const timestamp = new Date().toISOString();

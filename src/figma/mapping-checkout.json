@@ -1,0 +1,14 @@
+{
+  "page": "Checkout",
+  "figmaFileKey": "abcd1234",
+  "figmaNodeIds": ["123:456", "789:101"],
+  "pageUrl": "/checkout",
+  "scenario": "./scenarios/checkout.js",
+  "components": [
+    {
+      "name": "SubmitButton",
+      "selectorHints": ["button.submit", "data-testid=SubmitButton"],
+      "figmaNodeId": "123:456"
+    }
+  ]
+}
