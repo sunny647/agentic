@@ -1,67 +1,68 @@
 {
-  "pagePath": "/",
-  "components": [
-    {
-      "name": "FormTitle",
-      "figmaNodeId": "418:10",
-      "selectorHints": [
-        ".jira-main-title",
-        "div.jira-main-title",
-        "div:has-text('Submit Story for Agentic Software Development Life Cycle')"
-      ]
-    },
-    {
-      "name": "IssueKeyField",
-      "figmaNodeId": "418:13",
-      "selectorHints": [
-        "input#key",
-        "input[name='key']",
-        "input[placeholder*='SCRUM']"
-      ]
-    },
-    {
-      "name": "SummaryField",
-      "figmaNodeId": "418:17",
-      "selectorHints": [
-        "input#summary",
-        "input[name='summary']"
-      ]
-    },
-    {
-      "name": "DescriptionField",
-      "figmaNodeId": "418:19",
-      "selectorHints": [
-        "textarea#description",
-        "textarea[name='description']"
-      ]
-    },
-    {
-      "name": "AttachImageButton",
-      "figmaNodeId": "418:26",
-      "selectorHints": [
-        "input#imageUpload",
-        "input[name='image']",
-        "input[type='file']"
-      ]
-    },
-    {
-      "name": "SubmitButton",
-      "figmaNodeId": "418:27",
-      "selectorHints": [
-        "button.jira-submit-btn",
-        "button[type='submit']",
-        "button:has-text('Submit')"
-      ]
-    },
-    {
-      "name": "ResultSection",
-      "figmaNodeId": "FIGMA_NODE_ID_ResultSection",
-      "optional": true,
-      "selectorHints": [
-        "div#result",
-        ".jira-result"
-      ]
-    }
-  ],
-  "fullPageScreenshot": true
+  "https://agentic-i1ng.onrender.com/": {
+    "components": [
+      {
+        "name": "FormTitle",
+        "figmaNodeId": "418:10",
+        "selectorHints": [
+          ".jira-main-title",
+          "div.jira-main-title",
+          "div:has-text('Submit Story for Agentic Software Development Life Cycle')"
+        ]
+      },
+      {
+        "name": "IssueKeyField",
+        "figmaNodeId": "418:13",
+        "selectorHints": [
+          "input#key",
+          "input[name='key']",
+          "input[placeholder*='SCRUM']"
+        ]
+      },
+      {
+        "name": "SummaryField",
+        "figmaNodeId": "418:17",
+        "selectorHints": [
+          "input#summary",
+          "input[name='summary']"
+        ]
+      },
+      {
+        "name": "DescriptionField",
+        "figmaNodeId": "418:19",
+        "selectorHints": [
+          "textarea#description",
+          "textarea[name='description']"
+        ]
+      },
+      {
+        "name": "AttachImageButton",
+        "figmaNodeId": "418:26",
+        "selectorHints": [
+          "input#imageUpload",
+          "input[name='image']",
+          "input[type='file']"
+        ]
+      },
+      {
+        "name": "SubmitButton",
+        "figmaNodeId": "418:27",
+        "selectorHints": [
+          "button.jira-submit-btn",
+          "button[type='submit']",
+          "button:has-text('Submit')"
+        ]
+      },
+      {
+        "name": "ResultSection",
+        "figmaNodeId": "FIGMA_NODE_ID_ResultSection",
+        "optional": true,
+        "selectorHints": [
+          "div#result",
+          ".jira-result"
+        ]
+      }
+    ],
+    "fullPageScreenshot": true
+  }
 }

@@ -76,7 +76,11 @@ async function extractElement(page, selector) {
 }
 
 export async function runSiteExtraction(url) {
-  const mapping = JSON.parse(await fs.readFile(MAPPING_FILE, 'utf8'));
+  const allMappings = JSON.parse(await fs.readFile(MAPPING_FILE, 'utf8'));
+  const mapping = allMappings[url];
+  if (!mapping) {
+    throw new Error(`No mapping found for URL: ${url}`);
+  }
 
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
   const context = await browser.newContext();
@@ -88,12 +92,9 @@ export async function runSiteExtraction(url) {
     const scenarioPath = path.resolve(mapping.scenario);
     const scenarioFn = (await import(scenarioPath)).default;
     await scenarioFn(page);
-  } else if (mapping.pageUrl) {
-    const url = baseUrl + mapping.pageUrl;
+  } else {
     console.log(`Navigating to ${url}`);
     await page.goto(url, { waitUntil: "networkidle" });
-  } else {
-    throw new Error("No pageUrl or scenario provided in mapping.json");
   }
 
   await disableAnimations(page);
