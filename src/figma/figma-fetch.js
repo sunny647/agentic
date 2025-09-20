@@ -6,7 +6,6 @@ import minimist from "minimist";
 import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
-import { json } from "stream/consumers";
 
 // Always load .env from project root
 const __filename = fileURLToPath(import.meta.url);
@@ -91,13 +90,13 @@ async function fetchFigmaScreenshots(fileKey, nodeIds) {
   if (!nodeIds || nodeIds.length === 0) return {};
 
   // Figma API only allows up to 100 node IDs per request
-  const screenshotPaths = {};
+  const screenPaths = {};
   await fs.mkdir("./artifacts/figma-screenshots", { recursive: true });
 
   for (let i = 0; i < nodeIds.length; i += 100) {
     const batch = nodeIds.slice(i, i + 100);
-    const idsParam = batch.join(',').replace(/:/g, '-');
-    const imageUrlsApi = `https://api.figma.com/v1/files/${fileKey}/images?ids=${idsParam}&scale=2&format=png`;
+    const idsParam = batch.join(',');
+      const imageUrlsApi = `https://api.figma.com/v1/images/${fileKey}?ids=${idsParam}`;
     console.log(`Fetching Figma image URLs for nodes for file ${fileKey} : ${idsParam}`);
     const res = await axios.get(imageUrlsApi, {
       headers: { "X-Figma-Token": FIGMA_TOKEN }
@@ -105,25 +104,34 @@ async function fetchFigmaScreenshots(fileKey, nodeIds) {
     if (res.status !== 200) {
       throw new Error(`Figma Image API failed: ${res.status} ${res.statusText}`);
     }
-    const { images } = res.data.meta;
+    console.log("Figma Image API response:", JSON.stringify(res.data, null, 2));
+    const { images } = res.data;
     const outFile = path.join("./artifacts", `figma_raw_images_${Date.now()}.json`);
   await fs.mkdir("./artifacts", { recursive: true });
   await fs.writeFile(outFile, JSON.stringify(res.data, null, 2));
     for (const nodeId in images) {
       const imageUrl = images[nodeId];
+      console.log(`Image URL for node ${nodeId}:`, imageUrl);
       if (imageUrl) {
-        const fileName = `figma_node_${nodeId}_${Date.now()}.png`;
-        const filePath = path.join("./artifacts/figma-screenshots", fileName);
-        console.log(`Downloading Figma image for node ${nodeId}`);
-        const imageRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        await fs.writeFile(filePath, imageRes.data);
-        screenshotPaths[nodeId] = filePath;
+        console.log(`Fetching Figma image for node ${nodeId}`);
+        try {
+          const imageRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+          const base64 = Buffer.from(imageRes.data).toString('base64');
+          screenPaths[nodeId] = {
+            url: imageUrl,
+            base64: `data:image/png;base64,${base64}`
+          };
+        } catch (err) {
+          console.error(`Failed to fetch image for node ${nodeId}:`, err.message);
+          screenPaths[nodeId] = null;
+        }
       } else {
         console.warn(`No image URL found for Figma node ${nodeId}. It might be hidden or a non-renderable type.`);
+        screenPaths[nodeId] = null;
       }
     }
   }
-  return screenshotPaths;
+  return screenPaths;
 }
 
 // Recursively collect all node IDs from normalized node tree
@@ -173,7 +181,7 @@ async function run(figmaUrl) {
   // Recursively collect all node IDs from normalized node tree
   const allNodeIds = collectNodeIds(nodes);
   const figmaScreenshots = await fetchFigmaScreenshots(fileKey, allNodeIds);
-
+  console.log("Fetched screenshots for nodes:", JSON.stringify(figmaScreenshots, null, 2));
   // Recursively attach screenshots to nodes and children
   function attachScreenshots(node) {
     if (figmaScreenshots[node.id]) {
